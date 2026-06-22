@@ -838,7 +838,7 @@ function renderTopbar(){
       </div>
     </div>
     <div class="tabrow">
-      ${['oggi','produzione','archivio'].map(v=>`<button class="tab${S.view===v?' on':''}" data-v="${v}">${v==='oggi'?'Oggi':v==='produzione'?'Produzione':'Archivio'}</button>`).join('')}
+      ${['oggi','produzione','archivio','impostazioni'].map(v=>`<button class="tab${S.view===v?' on':''}" data-v="${v}">${v==='oggi'?'Oggi':v==='produzione'?'Produzione':v==='archivio'?'Archivio':'Impostazioni'}</button>`).join('')}
     </div>
   </div>`;
   document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{S.view=b.dataset.v;render();}));
@@ -1005,7 +1005,7 @@ function renderProduzione(){
 
   // Attrezzatura
   h+=`<div class="sec">
-    <div class="sectit"><h2>Attrezzatura</h2><span class="n">contesto usato in ogni analisi</span></div>
+    <div class="sectit"><h2>Attrezzatura</h2></div>
     <div class="card" style="padding:18px">
       <div class="field"><label class="lbl">Titolo produzione</label><input id="prof-nome" class="inp" type="text" value="${esc(S.profile.nome)}" placeholder="Es. Nobody's Diary"></div>
       <div class="field"><label class="lbl">Mezzi / attrezzatura a disposizione</label><textarea id="prof-gear" class="inp" rows="4" placeholder="Camera, ottiche, follow focus wireless, monitor, transmitter, batterie…&#10;Es. ARRI Alexa 35, Cooke S4, Hi-5 wireless, Swit K15 + Teradek Bolt 4K, Blueshape…">${esc(S.profile.gear)}</textarea></div>
@@ -1017,27 +1017,6 @@ function renderProduzione(){
     </div>
   </div>`;
 
-  // API Key + impostazioni
-  h+=`<div class="sec">
-    <div class="sectit"><h2>Impostazioni</h2><span class="n">solo per la modalità API</span></div>
-    <div class="card" style="padding:18px">
-      ${S.mode==='manual'?`<div class="vbanner" style="margin:0 0 16px">Sei in <b>modalità Manuale</b>: non ti serve nessuna API key. Compila questo campo solo se passi alla modalità <b>⚡ API</b> per l'analisi automatica.</div>`:''}
-      <div class="field">
-        <label class="lbl">Anthropic API Key</label>
-        <input id="inp-key" class="inp mono" type="password" value="${esc(S.apiKey)}" placeholder="sk-ant-api03-…">
-        <div class="hint">Ottieni la key su <b>console.anthropic.com</b> → API Keys. Salvata solo in questo browser (localStorage), non trasmessa a terze parti. Costo stimato: pochi centesimi per giornata di analisi.</div>
-      </div>
-      <div class="row">
-        <button id="btn-skey" class="btn ghost sm">Salva API key</button>
-        <span id="key-ok" class="saved" style="display:none"><span class="dot" style="background:var(--acc)"></span>Salvata</span>
-        ${S.apiKey?`<span class="ok">● Attiva</span>`:''}
-      </div>
-    </div>
-    <div class="mode-note" style="margin-top:14px">${S.mode==='manual'
-      ?`<b style="color:var(--acc)">Manuale · gratis</b> — i pulsanti preparano un prompt da incollare in claude.ai.`
-      :`<b style="color:var(--amb)">Claude API</b> — elaborazione automatica, richiede la API key qui sotto.`}</div>
-    <div class="ft">Tutti i dati (memoria, archivio, profilo) restano sul tuo browser in localStorage. In modalità API i testi vengono inviati ad Anthropic su HTTPS solo quando premi Analizza. In modalità Manuale nulla viene inviato automaticamente: sei tu a portare il prompt su claude.ai.</div>
-  </div>`;
 
   h+='</div>';
   document.getElementById('main').innerHTML=h;
@@ -1078,6 +1057,39 @@ function renderProduzione(){
   });
 }
 
+function renderImpostazioni(){
+  let h=`<div class="shell">`;
+  h+=`<div class="sec">
+    <div class="sectit"><h2>API Key</h2></div>
+    <div class="card" style="padding:18px">
+      ${S.mode==='manual'?`<div class="vbanner" style="margin:0 0 16px">Sei in <b>modalità Manuale</b>: non ti serve nessuna API key. Compila questo campo solo se passi alla modalità <b>⚡ API</b> per l'analisi automatica.</div>`:''}
+      <div class="field">
+        <label class="lbl">Anthropic API Key</label>
+        <input id="inp-key" class="inp mono" type="password" value="${esc(S.apiKey)}" placeholder="sk-ant-api03-…">
+        <div class="hint">Ottieni la key su <b>console.anthropic.com</b> → API Keys. Salvata solo in questo browser (localStorage), non trasmessa a terze parti. Costo stimato: pochi centesimi per giornata di analisi.</div>
+      </div>
+      <div class="row">
+        <button id="btn-skey" class="btn ghost sm">Salva API key</button>
+        <span id="key-ok" class="saved" style="display:none"><span class="dot" style="background:var(--acc)"></span>Salvata</span>
+        ${S.apiKey?`<span class="ok">● Attiva</span>`:''}
+      </div>
+    </div>
+    <div class="mode-note" style="margin-top:14px">${S.mode==='manual'
+      ?`<b style="color:var(--acc)">Manuale · gratis</b> — i pulsanti preparano un prompt da incollare in claude.ai.`
+      :`<b style="color:var(--amb)">Claude API</b> — elaborazione automatica, richiede la API key qui sotto.`}</div>
+    <div class="ft">Tutti i dati (memoria, archivio, profilo) restano sul tuo browser in localStorage. In modalità API i testi vengono inviati ad Anthropic su HTTPS solo quando premi Analizza. In modalità Manuale nulla viene inviato automaticamente: sei tu a portare il prompt su claude.ai.</div>
+  </div>`;
+
+  h+='</div>';
+  document.getElementById('main').innerHTML=h;
+  document.getElementById('btn-skey')?.addEventListener('click',()=>{
+    S.apiKey=document.getElementById('inp-key').value.trim();
+    localStorage.setItem('ac.key',S.apiKey);
+    const el=document.getElementById('key-ok');el.style.display='inline-flex';
+    setTimeout(()=>{el.style.display='none';render();},1500);
+  });
+}
+
 function renderArchivio(){
   let h=`<div class="shell"><div class="sec">
     <div class="sectit"><h2>Archivio</h2><span class="n">${S.index.length} ${S.index.length===1?'giornata':'giornate'} salvate</span></div>`;
@@ -1103,7 +1115,7 @@ function renderArchivio(){
 // ═══════════════════════════ RENDER ═══════════════════════════════════
 function render(){
   renderTopbar();
-  ({oggi:renderOggi,produzione:renderProduzione,archivio:renderArchivio}[S.view]||renderOggi)();
+  ({oggi:renderOggi,produzione:renderProduzione,archivio:renderArchivio,impostazioni:renderImpostazioni}[S.view]||renderOggi)();
   renderBridge();
   requestAnimationFrame(playDials);
 }
