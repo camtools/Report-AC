@@ -845,9 +845,6 @@ function renderTopbar(){
 
 function renderOggi(){
   let h=`<div class="shell">`;
-  h+=`<div class="modebar no-print"><span class="ml">Modalità</span>${S.mode==='manual'
-    ?`<span class="mode-note"><b style="color:var(--acc)">Manuale · gratis</b> — l'app prepara il prompt, tu lo porti su claude.ai e incolli la risposta.</span>`
-    :`<span class="mode-note"><b style="color:var(--amb)">Claude API</b> — analisi automatica, costo a consumo (pochi centesimi).</span>`}</div>`;
 
   // Input card
   h+=`<div class="sec no-print">
@@ -883,6 +880,9 @@ function renderOggi(){
         ${S.mode==='api'&&!S.apiKey?`<span class="warn">⚠ Imposta la API key in Produzione → Impostazioni</span>`:''}
         ${S.mode==='manual'?`<span class="mode-note">Genera il prompt per claude.ai, poi incolli la risposta</span>`:''}
       </div>
+      <div class="mode-note" style="margin-top:14px">${S.mode==='manual'
+        ?`<b style="color:var(--acc)">Manuale · gratis</b> — l'app prepara il prompt, tu lo porti su claude.ai e incolli la risposta.`
+        :`<b style="color:var(--amb)">Claude API</b> — analisi automatica, costo a consumo (pochi centesimi).`}</div>
       ${S.error?`<div class="err">${esc(S.error)}</div>`:''}
     </div>
   </div>`;
@@ -956,9 +956,6 @@ function renderOggi(){
 function renderProduzione(){
   const m=S.memoria;
   let h=`<div class="shell">`;
-  h+=`<div class="modebar"><span class="ml">Modalità</span>${S.mode==='manual'
-    ?`<span class="mode-note"><b style="color:var(--acc)">Manuale · gratis</b> — i pulsanti preparano un prompt da incollare in claude.ai.</span>`
-    :`<span class="mode-note"><b style="color:var(--amb)">Claude API</b> — elaborazione automatica, richiede la API key qui sotto.</span>`}</div>`;
 
   // Documenti
   h+=`<div class="sec">
@@ -1034,6 +1031,9 @@ function renderProduzione(){
         ${S.apiKey?`<span class="ok">● Attiva</span>`:''}
       </div>
     </div>
+    <div class="mode-note" style="margin-top:14px">${S.mode==='manual'
+      ?`<b style="color:var(--acc)">Manuale · gratis</b> — i pulsanti preparano un prompt da incollare in claude.ai.`
+      :`<b style="color:var(--amb)">Claude API</b> — elaborazione automatica, richiede la API key qui sotto.`}</div>
     <div class="ft">Tutti i dati (memoria, archivio, profilo) restano sul tuo browser in localStorage. In modalità API i testi vengono inviati ad Anthropic su HTTPS solo quando premi Analizza. In modalità Manuale nulla viene inviato automaticamente: sei tu a portare il prompt su claude.ai.</div>
   </div>`;
 
