@@ -828,7 +828,7 @@ function renderTopbar(){
   document.getElementById('topbar').innerHTML=`<div class="tbar-inner">
     <div class="brand">
       <div class="bmark"></div>
-      <div class="btxt"><b>Shot Report</b><small>AI Assistant · reparto macchina</small></div>
+      <div class="btxt"><b>Shot Report</b><small>AI Assistant</small></div>
     </div>
     <div class="tabrow">
       ${['oggi','produzione','archivio'].map(v=>`<button class="tab${S.view===v?' on':''}" data-v="${v}">${v==='oggi'?'Oggi':v==='produzione'?'Produzione':'Archivio'}</button>`).join('')}
@@ -959,7 +959,7 @@ function renderProduzione(){
 
   // Documenti
   h+=`<div class="sec">
-    <div class="sectit"><h2>Documenti produzione</h2><span class="n">sceneggiatura · spoglio · piano di lavorazione</span></div>
+    <div class="sectit"><h2>Documenti produzione</h2></div>
     <div class="card" style="padding:18px">
       ${docRow('sceneggiatura','Sceneggiatura')}
       ${docRow('spoglio','Spoglio della sceneggiatura')}
