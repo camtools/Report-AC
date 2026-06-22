@@ -237,7 +237,7 @@ const S={
   view:'oggi',
   apiKey: localStorage.getItem('ac.key')||'',
   profile: lsGet('ac.profile',{nome:'',gear:'',note:''}),
-  docs:    (d=>{d.listamateriale=d.listamateriale||null;return d;})(lsGet('ac.docs',   {sceneggiatura:null,spoglio:null,pdl:null,listamateriale:null})),
+  docs:    lsGet('ac.docs',   {sceneggiatura:null,spoglio:null,pdl:null,listamateriale:null}),
   memVersions: lsGet('ac.memVersions',[]),
   memCurrentId: lsGet('ac.memCurrentId',null),
   memoria: null,            // puntatore alla versione corrente (impostato sotto)
@@ -265,6 +265,9 @@ const S={
   S.memoria=S.memVersions.find(v=>v.id===S.memCurrentId)||S.memVersions[0]||null;
   if(S.memoria)S.memCurrentId=S.memoria.id;
 })();
+
+// Migrazione docs: aggiungi listamateriale se manca
+if(!S.docs.listamateriale){S.docs.listamateriale=null;lsSet('ac.docs',S.docs);}
 
 // ═══════════════════════════ STORAGE ══════════════════════════════════
 function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;}}
