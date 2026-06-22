@@ -35,7 +35,7 @@ button{font-family:var(--sans);cursor:pointer}
 .bmark{width:30px;height:30px;border-radius:8px;border:1px solid var(--b2);background:radial-gradient(circle at 50% 50%,var(--acc) 0 4px,transparent 5px),conic-gradient(from 0deg,var(--sf2),var(--b2),var(--sf2));flex:none}
 .btxt b{font-size:15px;font-weight:700;letter-spacing:.01em;display:block;line-height:1.1;font-family:var(--disp)}
 .btxt small{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-top:-2px}
-.tabrow{display:flex;gap:2px;align-items:center}
+.tabrow{display:flex;gap:2px;align-items:center;justify-content:center}
 .tab{background:none;border:none;color:var(--mu);padding:8px 11px;font-family:var(--mono);font-size:12px;letter-spacing:.13em;text-transform:uppercase;position:relative;transition:color .12s}
 .tab:hover{color:var(--tx)}
 .tab.on{color:var(--tx)}
@@ -855,7 +855,7 @@ function renderOggi(){
       <div class="row" style="margin-bottom:16px;align-items:flex-end;gap:16px">
         <div style="flex:0 0 180px">
           <label class="lbl">Data</label>
-          <input id="inp-data" class="inp mono" style="resize:none" type="text" value="${esc(S.day.data)}" placeholder="2026-06-22">
+          <input id="inp-data" class="inp mono" style="resize:none" type="text" value="${fmtDate(S.day.data)}" placeholder="22-6-2026">
         </div>
         ${S.profile.nome?`<div style="padding-bottom:11px"><span class="lbl" style="display:inline;margin:0">Produzione</span> <span style="font-family:var(--mono);font-size:13px;color:var(--tx)">${esc(S.profile.nome)}</span></div>`:''}
         <div style="padding-bottom:11px">
@@ -933,7 +933,9 @@ function renderOggi(){
 
   // Listeners
   document.getElementById('btn-go')?.addEventListener('click',()=>{
-    S.day.data=document.getElementById('inp-data').value;
+    const dval=document.getElementById('inp-data').value;
+    const parts=dval.match(/(\d+)-(\d+)-(\d+)/);
+    if(parts){const d=new Date(parts[3],parseInt(parts[2])-1,parseInt(parts[1]));S.day.data=d.toISOString().slice(0,10);}
     runDay();
   });
   document.getElementById('f-odg')?.addEventListener('change',async e=>{
