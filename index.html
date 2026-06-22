@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>First AC · AI Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --bg:#101113;--bg2:#17191c;--sf:#181a1d;--sf2:#23262b;
+  --b:#2c3036;--b2:#3a414a;
+  --tx:#e8e9ec;--tx2:#bcc0c7;--mu:#7b828d;--mu2:#565d66;
+  --acc:#f08a24;
+  --alta:#f08a24;--media:#b98a52;--bassa:#7b828d;
+  /* alias compat con codice esistente */
+  --red:#f08a24;--amb:#b98a52;--grn:#7b828d;
+  --rdim:rgba(240,138,36,.11);--adim:rgba(185,138,82,.09);--gdim:rgba(123,130,141,.07);
+  --mono:'IBM Plex Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --disp:'Space Grotesk','Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.5}
+button{font-family:var(--sans);cursor:pointer}
+
+/* Layout */
+#topbar{position:sticky;top:0;z-index:40;background:rgba(16,17,19,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--b)}
+.tbar-inner{max-width:860px;margin:0 auto;padding:14px 18px 0}
+.shell{max-width:860px;margin:0 auto;padding:0 18px 90px}
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:13px}
+.bmark{width:30px;height:30px;border-radius:8px;border:1px solid var(--b2);background:radial-gradient(circle at 50% 50%,var(--acc) 0 4px,transparent 5px),conic-gradient(from 0deg,var(--sf2),var(--b2),var(--sf2));flex:none}
+.btxt b{font-size:15px;font-weight:700;letter-spacing:.01em;display:block;line-height:1.1;font-family:var(--disp)}
+.btxt small{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--mu)}
+.tabrow{display:flex;gap:2px;align-items:center;flex-wrap:wrap}
+.tab{background:none;border:none;color:var(--mu);padding:10px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;position:relative;transition:color .12s}
+.tab:hover{color:var(--tx)}
+.tab.on{color:var(--tx)}
+.tab.on::after{content:'';position:absolute;left:14px;right:14px;bottom:-1px;height:2px;background:var(--acc)}
+
+/* Generics */
+.sec{margin-top:26px}
+.sectit{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.sectit h2{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-family:var(--disp)}
+.sectit .n{font-family:var(--mono);font-size:11px;color:var(--mu2)}
+.card{background:var(--sf);border:1px solid var(--b);border-radius:12px}
+.lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);display:block;margin-bottom:7px}
+.field{margin-bottom:16px}
+.inp{width:100%;background:var(--bg2);border:1px solid var(--b);border-radius:10px;color:var(--tx);font-family:var(--sans);font-size:14px;padding:11px 12px;resize:vertical;transition:border-color .12s}
+.inp:focus{outline:none;border-color:var(--acc);background:#13151a}
+.inp.mono{font-family:var(--mono);font-size:13px}
+.hint{font-size:12px;color:var(--mu2);margin-top:6px;line-height:1.5}
+.btn{background:var(--acc);color:#15110b;border:none;border-radius:10px;padding:12px 20px;font-size:13px;font-weight:650;letter-spacing:.02em;display:inline-flex;align-items:center;gap:8px;transition:filter .12s,opacity .12s}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:default;filter:none}
+.btn.ghost{background:var(--sf2);color:var(--tx);border:1px solid var(--b)}
+.btn.ghost:hover{border-color:var(--b2);filter:none}
+.btn.sm{padding:8px 13px;font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+
+/* Criticità */
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:999px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;border:1px solid}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;border:1px solid}
+.c-alta{color:var(--alta);border-color:rgba(240,138,36,.45);background:rgba(240,138,36,.11)}
+.c-alta .dot{background:var(--alta)}
+.c-media{color:var(--media);border-color:rgba(185,138,82,.4);background:rgba(185,138,82,.09)}
+.c-media .dot{background:var(--media)}
+.c-bassa{color:var(--bassa);border-color:#363b42;background:rgba(123,130,141,.07)}
+.c-bassa .dot{background:var(--bassa)}
+
+/* Dial — ghiera diaframmi (firma della scene card) */
+.dial{position:relative;height:36px;background:var(--sf2);border-bottom:1px solid var(--b);overflow:hidden}
+.dial svg{display:block;width:100%;height:100%}
+.dial-needle{position:absolute;top:0;bottom:0;width:2px;left:4%;border-radius:2px;z-index:3;will-change:left;transition:left .9s cubic-bezier(.2,1,.32,1)}
+.dial-needle::before{content:'';position:absolute;top:-1px;left:50%;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid currentColor}
+.scene-card[data-crit="alta"]  .dial-needle{color:var(--alta);background:var(--alta);box-shadow:0 0 10px rgba(240,138,36,.85)}
+.scene-card[data-crit="media"] .dial-needle{color:var(--media);background:var(--media);box-shadow:0 0 6px rgba(185,138,82,.55)}
+.scene-card[data-crit="bassa"] .dial-needle{color:var(--bassa);background:var(--bassa);box-shadow:none}
+
+/* Scene card */
+.scene-card{margin-top:14px;border:1px solid var(--b);border-radius:12px;overflow:hidden;background:var(--sf)}
+.sch{padding:14px 17px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.sch .sc-id{font-family:var(--mono);font-size:11px;color:var(--mu2);letter-spacing:.1em;margin-bottom:4px}
+.sch .sc-title{font-size:17px;font-weight:600;line-height:1.2;font-family:var(--disp);letter-spacing:-.01em}
+.sch .sc-hdr{font-family:var(--mono);font-size:11px;color:var(--mu);margin-top:5px}
+.synth{padding:10px 17px 4px;font-size:14px;color:var(--tx2);line-height:1.55}
+.sgrid{padding:8px 17px 17px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sgrid .full{grid-column:1/-1}
+.scol h5{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:9px}
+.sli{display:flex;gap:9px;font-size:13.5px;line-height:1.48;color:var(--tx2);margin-bottom:7px}
+.sli .d{flex:none;font-family:var(--mono);font-size:11px;padding-top:2px;color:var(--mu2)}
+
+/* Block sections */
+.bsec{padding:16px 20px;border-top:1px solid var(--b)}
+.bsec h3{margin:0 0 12px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);font-family:var(--mono);display:flex;align-items:center;gap:8px}
+.bsec h3::before{content:'';display:inline-block;width:18px;height:2px;background:var(--b2);flex:none}
+.bli{display:flex;gap:11px;font-size:14px;line-height:1.5;color:var(--tx2);margin-bottom:9px}
+.bli .mk{flex:none;width:16px;font-family:var(--mono);font-size:12px;padding-top:2px}
+
+/* Day card */
+.dhead{padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.dmeta{display:flex;gap:22px;flex-wrap:wrap}
+.dmeta>div{display:flex;flex-direction:column;gap:3px}
+.dmeta b{font-family:var(--mono);font-size:19px;font-weight:600}
+.ov{padding:18px 20px;color:var(--tx2);font-size:14.5px;line-height:1.62;border-top:1px solid var(--b)}
+
+/* Doc upload */
+.doc-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;background:var(--sf2);border:1px solid var(--b);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--tx)}
+.doc-fn{font-family:var(--mono);font-size:11px;color:var(--acc)}
+.doc-fn{font-family:var(--mono);font-size:11px;color:var(--acc)}
+
+/* Loading */
+.spin{width:32px;height:32px;border:3px solid var(--b);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+.spin.sm{width:22px;height:22px;border-width:2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Mem preview */
+.mem-box{padding:18px}
+.mem-box .mlbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+.mem-text{font-size:14px;line-height:1.6;color:var(--tx2);white-space:pre-wrap}
+
+/* Archive */
+.arc-btn{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--sf);border:1px solid var(--b);border-radius:10px;text-align:left;width:100%;cursor:pointer;color:var(--tx);margin-bottom:8px;transition:border-color .12s,background .12s}
+.arc-btn:hover{border-color:var(--b2);background:var(--sf2)}
+.arc-info{flex:1;min-width:0}
+.arc-info b{font-family:var(--disp);font-size:14px;font-weight:600;display:block}
+.arc-info span{font-size:12.5px;color:var(--mu);display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arc-count{font-family:var(--mono);font-size:11px;color:var(--mu2);letter-spacing:.1em;flex:none}
+
+/* Versioning */
+.vbanner{margin:14px 0 0;padding:11px 15px;border:1px solid rgba(185,138,82,.4);background:rgba(185,138,82,.09);border-radius:10px;font-size:12.5px;color:#d9b97a;line-height:1.5}
+.ver-item{display:flex;align-items:center;gap:13px;padding:13px 15px;border:1px solid var(--b);border-radius:9px;margin-bottom:8px;background:var(--sf)}
+.ver-item.cur{border-color:rgba(240,138,36,.4);background:linear-gradient(rgba(240,138,36,.07),rgba(240,138,36,.07)),var(--sf)}
+.ver-num{font-family:var(--mono);font-size:15px;font-weight:600;flex:none;width:34px;color:var(--acc)}
+.ver-meta{flex:1;min-width:0}
+.ver-meta .vd{font-family:var(--mono);font-size:12px;color:var(--tx)}
+.ver-meta .vf{font-size:11.5px;color:var(--mu2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.ver-cur-badge{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);border:1px solid rgba(240,138,36,.4);border-radius:4px;padding:3px 7px;flex:none}
+.ver-acts{display:flex;gap:6px;flex:none}
+.mini{background:var(--sf2);border:1px solid var(--b);color:var(--mu);border-radius:6px;padding:6px 9px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;cursor:pointer;transition:color .12s,border-color .12s}
+.mini:hover{color:var(--tx);border-color:var(--b2)}
+.mini.danger:hover{color:var(--alta);border-color:rgba(240,138,36,.4)}
+.cmp{margin-top:12px;border:1px solid var(--b2);border-radius:12px;background:var(--bg2);overflow:hidden}
+.cmp-head{padding:14px 17px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--b);background:var(--sf)}
+.cmp-head b{font-family:var(--mono);font-size:13px;font-weight:600}
+.cmp-head small{font-size:11px;color:var(--mu2);display:block;margin-top:2px}
+.cmp-body{padding:6px 17px 16px}
+.cmp-grp{padding:13px 0;border-bottom:1px solid var(--b)}
+.cmp-grp:last-child{border-bottom:none}
+.cmp-grp h4{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+.diff{display:flex;gap:9px;font-size:13px;line-height:1.5;margin-bottom:7px;align-items:flex-start}
+.diff .s{flex:none;font-family:var(--mono);font-size:12px;font-weight:700;width:14px;padding-top:1px}
+.diff.add .s{color:var(--tx2)} .diff.add{color:var(--tx2)}
+.diff.rem .s{color:var(--alta);opacity:.6} .diff.rem{color:var(--mu)}
+.diff.chg .s{color:var(--acc)} .diff.chg{color:#e8d0b0}
+.diff .scn{font-family:var(--mono);font-size:11px;color:var(--mu2);flex:none}
+.crit-arrow{font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;gap:6px;margin:2px 0}
+.cmp-none{font-size:12.5px;color:var(--mu2);font-style:italic}
+.diff-ai{margin-top:6px;padding:14px 17px;border-top:1px solid var(--b);background:var(--sf)}
+.diff-ai .ai-txt{font-size:13.5px;line-height:1.6;color:var(--tx2);white-space:pre-wrap}
+
+/* Mode switch */
+.modebar{display:flex;align-items:center;gap:10px;padding:9px 0 13px;flex-wrap:wrap}
+.modebar .ml{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mu2)}
+.mseg{display:inline-flex;background:var(--bg2);border:1px solid var(--b);border-radius:8px;padding:3px;gap:2px}
+.mseg button{background:none;border:none;color:var(--mu);font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:6px 13px;border-radius:6px;display:inline-flex;align-items:center;gap:7px;transition:color .12s,background .12s}
+.mseg button.on{background:var(--sf2);color:var(--tx)}
+.mseg button.on.api{color:var(--acc)}
+.mseg button.on.man{color:var(--tx2)}
+.mode-note{font-size:11.5px;color:var(--mu2)}
+
+/* Bridge overlay */
+.bov{position:fixed;inset:0;z-index:80;background:rgba(6,7,10,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 16px 60px}
+.bx{width:100%;max-width:680px;background:var(--sf);border:1px solid var(--b2);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}
+.bx-head{padding:17px 20px;border-bottom:1px solid var(--b);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;background:linear-gradient(rgba(240,138,36,.06),transparent)}
+.bx-head h3{font-size:15px;font-weight:650;letter-spacing:.01em;font-family:var(--disp)}
+.bx-head .sub{font-size:12px;color:var(--mu);margin-top:3px;line-height:1.45}
+.bx-x{background:var(--sf2);border:1px solid var(--b);color:var(--mu);border-radius:7px;padding:7px 11px;font-family:var(--mono);font-size:11px;cursor:pointer;flex:none}
+.bx-x:hover{color:var(--tx);border-color:var(--b2)}
+.bx-body{padding:18px 20px}
+.bstep{margin-bottom:20px}
+.bstep:last-child{margin-bottom:0}
+.bstep-h{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.bnum{width:22px;height:22px;border-radius:50%;background:var(--sf2);border:1px solid var(--b2);color:var(--acc);font-family:var(--mono);font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.bstep-h b{font-size:13.5px;font-weight:600}
+.bprompt{width:100%;background:var(--bg);border:1px solid var(--b);border-radius:9px;color:var(--mu);font-family:var(--mono);font-size:11.5px;line-height:1.5;padding:12px;height:120px;resize:vertical}
+.bresp{width:100%;background:var(--bg2);border:1px solid var(--b);border-radius:9px;color:var(--tx);font-family:var(--mono);font-size:12.5px;line-height:1.5;padding:12px;height:140px;resize:vertical}
+.bresp:focus{outline:none;border-color:var(--acc);background:#13151a}
+.brow{display:flex;gap:9px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.blink{display:inline-flex;align-items:center;gap:7px;text-decoration:none;background:var(--sf2);border:1px solid var(--b);color:var(--tx);border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:600}
+.blink:hover{border-color:var(--b2)}
+.bstep.locked{opacity:.45;pointer-events:none;filter:grayscale(.3)}
+.copied{font-family:var(--mono);font-size:11px;color:var(--acc);display:none;align-items:center;gap:6px}
+
+/* Status inline */
+.saved{font-family:var(--mono);font-size:11px;color:var(--acc);display:inline-flex;align-items:center;gap:7px}
+.ok {color:var(--acc);font-family:var(--mono);font-size:10.5px}
+.warn{color:var(--media);font-family:var(--mono);font-size:10.5px}
+.err{margin-top:14px;padding:13px 16px;border:1px solid rgba(240,138,36,.35);background:rgba(240,138,36,.08);border-radius:10px;font-size:13.5px;color:#e8b887;line-height:1.5}
+.ft{margin-top:28px;padding-top:18px;border-top:1px solid var(--b);font-size:11.5px;color:var(--mu2);line-height:1.6}
+
+/* Print */
+@media print{
+  #topbar,.no-print{display:none!important}
+  body{background:#fff;color:#000}
+  .shell{max-width:none;padding:0}
+  .card,.scene-card{border:1px solid #ccc;break-inside:avoid;box-shadow:none}
+  .dial{background:#f5f5f5;border-bottom:1px solid #ddd}
+  .dial-needle{background:#c06000!important;box-shadow:none!important}
+  .ov,.synth,.bli,.sli,.dmeta b{color:#000!important}
+  .bsec h3,.scol h5,.lbl,.mlbl{color:#555!important}
+  .mem-text{color:#000!important}
+  .print-head{display:block!important;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #000;font-size:18px;font-weight:700;color:#000;font-family:'Space Grotesk',sans-serif}
+  .c-alta{color:#c06000!important;background:#fde8d0!important}
+  .c-media{color:#7a5500!important;background:#f5e8cc!important}
+  .c-bassa{color:#4a5060!important;background:#e8eaed!important}
+}
+.print-head{display:none}
+@media(max-width:560px){.sgrid{grid-template-columns:1fr}.dmeta{gap:16px}}
+</style>
+</head>
+<body>
+<div id="topbar"></div>
+<div id="main"></div>
+<div id="bridge"></div>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ═══════════════════════════ STATE ════════════════════════════════════
+function today(){ return new Date().toISOString().slice(0,10); }
+
+const S={
+  view:'oggi',
+  apiKey: localStorage.getItem('ac.key')||'',
+  profile: lsGet('ac.profile',{nome:'',gear:'',note:''}),
+  docs:    lsGet('ac.docs',   {sceneggiatura:null,spoglio:null,pdl:null}),
+  memVersions: lsGet('ac.memVersions',[]),
+  memCurrentId: lsGet('ac.memCurrentId',null),
+  memoria: null,            // puntatore alla versione corrente (impostato sotto)
+  index:   lsGet('ac.index',  []),
+  day:     {data:today(),odg:'',scene:''},
+  analysis: null,
+  loading:false, step:'', sub:'', error:'',
+  memLoading:false, memStep:'', memError:'',
+  compare:null,             // {aId,bId}
+  diffAI:{loading:false,text:'',error:''},
+  mode: localStorage.getItem('ac.mode')||'manual',  // 'api' | 'manual'
+  bridge:null,              // ponte copia-incolla manuale verso claude.ai
+};
+
+// Migrazione dal vecchio formato a versione singola → archivio versioni
+(function initMem(){
+  const legacy=lsGet('ac.memoria',null);
+  if(legacy && !S.memVersions.length){
+    const v={id:'v'+(legacy.ts||Date.now()),v:1,ts:legacy.ts||Date.now(),docNames:{},
+      briefing:legacy.briefing||'',scene_chiave:legacy.scene_chiave||[],
+      pdl_summary:legacy.pdl_summary||'',rischi:legacy.rischi||[]};
+    S.memVersions=[v];S.memCurrentId=v.id;
+    lsSet('ac.memVersions',S.memVersions);lsSet('ac.memCurrentId',S.memCurrentId);
+  }
+  S.memoria=S.memVersions.find(v=>v.id===S.memCurrentId)||S.memVersions[0]||null;
+  if(S.memoria)S.memCurrentId=S.memoria.id;
+})();
+
+// ═══════════════════════════ STORAGE ══════════════════════════════════
+function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+
+// ═══════════════════════════ PDF ══════════════════════════════════════
+async function extractText(file){
+  const ab=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
+  let t='';
+  for(let i=1;i<=pdf.numPages;i++){
+    const pg=await pdf.getPage(i);
+    const ct=await pg.getTextContent();
+    t+=ct.items.map(s=>s.str).join(' ')+'\n';
+  }
+  return t.slice(0,80000);
+}
+
+// ═══════════════════════════ API ══════════════════════════════════════
+async function claude(sys,usr,maxT=2000){
+  if(!S.apiKey) throw new Error('API key non impostata — vai in Produzione → Impostazioni.');
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':S.apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:maxT,
+      system:sys,
+      messages:[{role:'user',content:usr}]
+    })
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'Errore HTTP '+r.status);}
+  const d=await r.json();
+  return d.content.filter(b=>b.type==='text').map(b=>b.text).join('\n');
+}
+
+function parseJSON(t){
+  t=t.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
+  const a=t.indexOf('{'),b=t.lastIndexOf('}');
+  if(a!==-1&&b!==-1)t=t.slice(a,b+1);
+  return JSON.parse(t);
+}
+
+// ═══════════════════════════ PROMPTS ══════════════════════════════════
+const SYS_DOCS=`Sei un primo assistente operatore (focus puller) esperto del cinema italiano con vent'anni di set.
+Analizza i documenti di produzione forniti ESCLUSIVAMENTE dal punto di vista del reparto macchina e della messa a fuoco.
+Rispondi SOLO con JSON valido, nessun testo prima o dopo:
+{"briefing":"quadro complessivo produzione per reparto macchina, max 1500 chars — sfide principali fuoco, scene critiche, condizioni particolari (pioggia/notte/handheld/fumo/fuoco vivo/specchi/schermi/barca/periodo storico/VFX), note operative essenziali","scene_chiave":[{"sc":"numero o rif.","desc":"3-4 parole","crit":"alta|media|bassa","nota":"nota fuoco sintetica"}],"pdl_summary":"sintesi piano di lavorazione — quanti giorni, ritmo, scene per giorno se desumibile, max 400 chars","rischi":["rischi tecnici principali per il reparto macchina — max 6 voci concise"]}`;
+
+const SYS_SCENE=`Sei un primo assistente operatore (focus puller) del cinema italiano, vent'anni di set su lungometraggi e serie.
+Analizzi UNA scena dal punto di vista del reparto macchina e della messa a fuoco.
+Se nel contesto è presente un briefing di produzione (delimitato da ━━), usalo per arricchire l'analisi con riferimenti specifici a quella produzione.
+Valuta: difficoltà fuoco (soggetti in movimento, rack focus, doppi piani, stima distanza), profondità di campo, scelta ottiche, condizioni (acqua/pioggia, notte, handheld/spalla, fumo, fuoco vivo, sangue/effetti, specchi nel blocking, schermi telefono/monitor, barca/mezzi, époque), sync wireless, autonomia batterie, sicurezza.
+Rispondi SOLO con JSON valido, nessun testo prima o dopo:
+{"criticita":"alta|media|bassa","titolo_breve":"3-6 parole","sintesi":"1-2 frasi: cosa succede e perché impatta fuoco/macchina","gear":["max 5 voci brevi"],"anticipa":["max 5 cose da preparare/provare/chiedere prima di girare"],"note_tecniche":["marche, T-stop, profondità di campo, sync, batterie, rischi concreti — max 5 voci"]}`;
+
+const SYS_DAY=`Sei un primo assistente operatore (focus puller) del cinema italiano.
+Hai analizzato le singole scene della giornata. Ora dai il quadro d'insieme per il reparto macchina, come faresti col tuo operatore a inizio giornata.
+Se nel contesto è presente un briefing di produzione, citalo dove pertinente.
+Rispondi SOLO con JSON valido, nessun testo prima o dopo:
+{"overview":"3-5 frasi: ritmo e peso della giornata, sfide principali del fuoco, considerazioni sull'ordine e i tempi","criticita_globale":"alta|media|bassa","checklist":["cose trasversali da avere pronte a inizio giornata — max 6 voci"],"anticipa":["da fare il giorno prima o nei tempi morti — max 5 voci"],"domande":["domande precise da porre a operatore/DoP/regia/produzione per non sbagliare — max 6 voci"]}`;
+
+const SYS_DIFF=`Sei un primo assistente operatore (focus puller) esperto. Ti vengono date due versioni della memoria di produzione — una PRECEDENTE e una NUOVA — perché qualcosa è cambiato nella sceneggiatura o nel piano di lavorazione durante la produzione.
+Spiega in modo conciso e operativo COSA È CAMBIATO che impatta il reparto macchina e la messa a fuoco, e cosa devi tenere d'occhio di conseguenza (scene diventate più critiche, nuovi rischi, nuove condizioni, scene rimosse).
+Niente JSON, niente elenchi puntati: testo scorrevole in italiano, max 6-7 frasi, diretto, tono da set. Se i cambiamenti sono minimi o solo formali, dillo chiaramente.`;
+
+const SYS_DAY_ALL=`Sei un primo assistente operatore (focus puller) del cinema italiano, vent'anni di set.
+Ti vengono date TUTTE le scene di una giornata di lavorazione. Analizzale una per una dal punto di vista del reparto macchina e della messa a fuoco, poi dai il quadro d'insieme della giornata.
+Se nel contesto è presente un briefing di produzione (delimitato da ━━), usalo per riferimenti specifici alla produzione.
+Per ogni scena valuta: difficoltà fuoco (movimento, rack focus, doppi piani, stima distanza), profondità di campo, ottiche, condizioni (acqua/pioggia, notte, handheld/spalla, fumo, fuoco vivo, sangue/effetti, specchi, schermi, barca/mezzi, époque), sync wireless, autonomia batterie, sicurezza.
+IMPORTANTE: l'array "scene" deve avere ESATTAMENTE un elemento per ogni scena fornita, NELLO STESSO ORDINE.
+Rispondi SOLO con JSON valido, nessun testo prima o dopo:
+{"scene":[{"criticita":"alta|media|bassa","titolo_breve":"3-6 parole","sintesi":"1-2 frasi","gear":["max 5"],"anticipa":["max 5"],"note_tecniche":["max 5"]}],"quadro":{"overview":"3-5 frasi sul ritmo e le sfide della giornata","criticita_globale":"alta|media|bassa","checklist":["max 6"],"anticipa":["max 5"],"domande":["domande per operatore/DoP/regia — max 6"]}}`;
+
+// ═══════════════════════════ UTILS ════════════════════════════════════
+const NORM=c=>{const v=(c||'').toLowerCase();return v.startsWith('a')?'alta':v.startsWith('m')?'media':'bassa';};
+const RANK={alta:3,media:2,bassa:1};
+const LABEL={alta:'Alta',media:'Media',bassa:'Bassa'};
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(iso){
+  try{return new Date(iso+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}
+  catch{return iso;}
+}
+function splitScenes(text){
+  if(!text.trim())return[];
+  const lines=text.split(/\r?\n/);
+  const H=/^\s*(\d+[.)]\s*)?(INT|EST|INT\s*[\/.\-]\s*EST|EST\s*[\/.\-]\s*INT|INTERNO|ESTERNO)\b/i;
+  const A=/^\s*SCENA\s+\d+/i;
+  const blks=[];let cur=null;
+  for(const ln of lines){
+    if(H.test(ln)||A.test(ln)){if(cur)blks.push(cur);cur={hdr:ln.trim(),txt:ln+'\n'};}
+    else if(cur){cur.txt+=ln+'\n';}
+    else{cur={hdr:'Sequenza',txt:ln+'\n'};}
+  }
+  if(cur)blks.push(cur);
+  if(!blks.length)blks.push({hdr:'Sequenza',txt:text});
+  return blks.filter(b=>b.txt.trim().length>3).map((b,i)=>({id:i+1,hdr:b.hdr.slice(0,90),txt:b.txt.trim()}));
+}
+
+// ═══════════════════════════ CONTEXT BUILDERS ═════════════════════════
+function memCtx(){
+  const m=S.memoria;if(!m)return'';
+  let c='\n\n━━ MEMORIA PRODUZIONE (usa per arricchire l\'analisi) ━━\n';
+  if(m.briefing)c+='BRIEFING REPARTO MACCHINA:\n'+m.briefing+'\n';
+  if(m.pdl_summary)c+='\nPIANO DI LAVORAZIONE:\n'+m.pdl_summary+'\n';
+  if(m.scene_chiave?.length){
+    c+='\nSCENE CHIAVE (da spoglio/sceneggiatura):\n';
+    c+=m.scene_chiave.map(s=>`• Sc.${s.sc} [${LABEL[NORM(s.crit)]}] ${s.desc} — ${s.nota}`).join('\n');
+  }
+  if(m.rischi?.length)c+='\n\nRISCHI TECNICI PRODUZIONE:\n'+m.rischi.map(r=>'• '+r).join('\n');
+  return c+'\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+}
+function histCtx(){
+  if(!S.index.length)return'';
+  const rec=S.index.slice(0,6).map(d=>`${fmtDate(d.data)} [${LABEL[d.crit]}] ${d.scene_count} sc. ${d.titoli||''}`);
+  return'\n\nGIORNATE GIÀ LAVORATE (per correlazioni):\n'+rec.join('\n')+'\n';
+}
+function prodCtx(){
+  let c='';
+  if(S.profile.nome)c+=`PRODUZIONE: ${S.profile.nome}\n`;
+  if(S.profile.gear)c+=`\nMEZZI / ATTREZZATURA:\n${S.profile.gear}\n`;
+  if(S.profile.note)c+=`\nNOTE PRODUZIONE:\n${S.profile.note}\n`;
+  return c;
+}
+
+// ═══════════════════════════ BUSINESS LOGIC ═══════════════════════════
+function buildDocsMsg(){
+  let msg=prodCtx()+'\n\n';
+  if(S.docs.sceneggiatura)msg+='=== SCENEGGIATURA ===\n'+S.docs.sceneggiatura.testo+'\n\n';
+  if(S.docs.spoglio)msg+='=== SPOGLIO ===\n'+S.docs.spoglio.testo+'\n\n';
+  if(S.docs.pdl)msg+='=== PIANO DI LAVORAZIONE ===\n'+S.docs.pdl.testo+'\n\n';
+  msg+='Crea il briefing di produzione per il reparto macchina.';
+  return msg;
+}
+function applyDocsResult(j){
+  const ts=Date.now();
+  const vnum=S.memVersions.reduce((m,v)=>Math.max(m,v.v||0),0)+1;
+  const ver={
+    id:'v'+ts, v:vnum, ts,
+    docNames:{
+      sceneggiatura:S.docs.sceneggiatura?.nome||null,
+      spoglio:S.docs.spoglio?.nome||null,
+      pdl:S.docs.pdl?.nome||null
+    },
+    briefing:j.briefing||'',
+    scene_chiave:Array.isArray(j.scene_chiave)?j.scene_chiave:[],
+    pdl_summary:j.pdl_summary||'',
+    rischi:Array.isArray(j.rischi)?j.rischi:[]
+  };
+  S.memVersions=[ver,...S.memVersions];
+  S.memCurrentId=ver.id;S.memoria=ver;
+  lsSet('ac.memVersions',S.memVersions);
+  lsSet('ac.memCurrentId',S.memCurrentId);
+  lsSet('ac.memoria',ver);
+  S.compare=null;
+}
+async function runDocs(){
+  if(!S.docs.sceneggiatura&&!S.docs.spoglio&&!S.docs.pdl){S.memError='Carica almeno un documento prima di analizzare.';render();return;}
+  const msg=buildDocsMsg();
+  if(S.mode==='manual'){openBridge('docs',SYS_DOCS,msg);return;}
+  S.memLoading=true;S.memError='';S.memStep='Analisi documenti in corso…';render();
+  try{
+    const raw=await claude(SYS_DOCS,msg,3000);
+    applyDocsResult(parseJSON(raw));S.memStep='';
+  }catch(e){S.memError='Analisi non riuscita: '+(e.message||'errore sconosciuto');}
+  finally{S.memLoading=false;render();}
+}
+
+function finalizeDay(res,dout){
+  const scMax=res.reduce((m,r)=>Math.max(m,RANK[r.criticita]),1);
+  const critG=Object.keys(RANK).find(k=>RANK[k]===Math.max(RANK[dout.criticita_globale]||1,scMax))||'media';
+  S.analysis={data:S.day.data,odg:S.day.odg,nome:S.profile.nome,crit:critG,overview:dout.overview,checklist:dout.checklist,anticipa:dout.anticipa,domande:dout.domande,scenes:res,memVersionId:S.memCurrentId,memV:S.memoria?.v||null,ts:Date.now()};
+}
+function applyDayResult(j,scenes){
+  const arr=Array.isArray(j.scene)?j.scene:[];
+  const res=scenes.map((sc,i)=>{
+    const x=arr[i]||{};
+    return{id:sc.id,hdr:sc.hdr,criticita:NORM(x.criticita),titolo:x.titolo_breve||sc.hdr,sintesi:x.sintesi||'',gear:Array.isArray(x.gear)?x.gear:[],anticipa:Array.isArray(x.anticipa)?x.anticipa:[],note:Array.isArray(x.note_tecniche)?x.note_tecniche:[],failed:!arr[i]};
+  });
+  const q=j.quadro||{};
+  finalizeDay(res,{overview:q.overview||'',criticita_globale:NORM(q.criticita_globale),checklist:Array.isArray(q.checklist)?q.checklist:[],anticipa:Array.isArray(q.anticipa)?q.anticipa:[],domande:Array.isArray(q.domande)?q.domande:[]});
+}
+async function runDay(){
+  S.error='';S.analysis=null;
+  const scenes=splitScenes(S.day.scene);
+  if(!scenes.length){S.error='Incolla almeno una scena nel campo sceneggiatura.';render();return;}
+  const base=prodCtx()+memCtx()+histCtx();
+
+  if(S.mode==='manual'){
+    const msg=base+`\n\nODG / NOTE DEL GIORNO:\n${S.day.odg||'(non fornito)'}\n\nSCENE DELLA GIORNATA (${scenes.length}) — analizzale tutte, una entry per scena nello stesso ordine:\n`+
+      scenes.map((s,i)=>`\n───── SCENA ${i+1} (rif: ${s.hdr}) ─────\n${s.txt}`).join('\n');
+    openBridge('day',SYS_DAY_ALL,msg,{scenes});
+    return;
+  }
+
+  S.loading=true;S.step=`Rilevate ${scenes.length} ${scenes.length===1?'scena':'scene'} — analisi reparto macchina`;S.sub='';render();
+  try{
+    const res=[];
+    for(let i=0;i<scenes.length;i++){
+      S.sub=`Scena ${i+1} di ${scenes.length}`;render();
+      const sc=scenes[i];
+      const msg=base+`\n\nODG / NOTE DEL GIORNO:\n${S.day.odg||'(non fornito)'}\n\nSCENA DA ANALIZZARE:\n${sc.txt}`;
+      try{
+        const raw=await claude(SYS_SCENE,msg,1500);
+        const j=parseJSON(raw);
+        res.push({id:sc.id,hdr:sc.hdr,criticita:NORM(j.criticita),titolo:j.titolo_breve||sc.hdr,sintesi:j.sintesi||'',gear:Array.isArray(j.gear)?j.gear:[],anticipa:Array.isArray(j.anticipa)?j.anticipa:[],note:Array.isArray(j.note_tecniche)?j.note_tecniche:[]});
+      }catch{
+        res.push({id:sc.id,hdr:sc.hdr,criticita:'media',titolo:sc.hdr,sintesi:'Analisi non riuscita per questa scena — riprova.',gear:[],anticipa:[],note:[],failed:true});
+      }
+    }
+    S.step='Quadro della giornata';S.sub='';render();
+    const dayMsg=base+`\n\nODG:\n${S.day.odg||'(non fornito)'}\n\nSCENE DELLA GIORNATA (già analizzate):\n`+res.map(r=>`• [${LABEL[r.criticita]}] ${r.titolo} — ${r.sintesi}`).join('\n');
+    let dout={overview:'',criticita_globale:'media',checklist:[],anticipa:[],domande:[]};
+    try{const raw=await claude(SYS_DAY,dayMsg,2000);const j=parseJSON(raw);dout={overview:j.overview||'',criticita_globale:NORM(j.criticita_globale),checklist:Array.isArray(j.checklist)?j.checklist:[],anticipa:Array.isArray(j.anticipa)?j.anticipa:[],domande:Array.isArray(j.domande)?j.domande:[]};}catch{}
+    finalizeDay(res,dout);
+  }catch(e){S.error=e.message||"Errore durante l'analisi.";}
+  finally{S.loading=false;S.step='';S.sub='';render();}
+}
+
+function saveDay(){
+  if(!S.analysis)return;
+  lsSet('ac.day.'+S.analysis.data,S.analysis);
+  const titoli=S.analysis.scenes.slice(0,3).map(s=>s.titolo).join(', ');
+  const entry={data:S.analysis.data,crit:S.analysis.crit,scene_count:S.analysis.scenes.length,titoli,memV:S.analysis.memV||null,nome:S.analysis.nome||'',ts:S.analysis.ts};
+  S.index=[entry,...S.index.filter(d=>d.data!==S.analysis.data)].sort((a,b)=>a.data<b.data?1:-1);
+  lsSet('ac.index',S.index);
+  const el=document.getElementById('save-ok');
+  if(el){el.style.display='inline-flex';setTimeout(()=>{el.style.display='none';},2500);}
+}
+
+function loadDay(data){
+  const d=lsGet('ac.day.'+data,null);
+  if(d){S.analysis=d;S.day.data=d.data;S.day.odg=d.odg||'';S.view='oggi';render();}
+}
+
+// ═══════════════════════════ VERSIONING ═══════════════════════════════
+function setCurrentVersion(id){
+  const v=S.memVersions.find(x=>x.id===id);if(!v)return;
+  S.memCurrentId=id;S.memoria=v;
+  lsSet('ac.memCurrentId',id);lsSet('ac.memoria',v);
+  render();
+}
+function deleteVersion(id){
+  if(!confirm('Eliminare questa versione della memoria?\nLe giornate già salvate restano intatte, ma non potrai più confrontarla né tornarci.'))return;
+  S.memVersions=S.memVersions.filter(v=>v.id!==id);
+  if(S.memCurrentId===id){
+    S.memoria=S.memVersions[0]||null;
+    S.memCurrentId=S.memoria?S.memoria.id:null;
+    lsSet('ac.memCurrentId',S.memCurrentId);
+    if(S.memoria)lsSet('ac.memoria',S.memoria); else localStorage.removeItem('ac.memoria');
+  }
+  if(S.compare&&(S.compare.aId===id||S.compare.bId===id))S.compare=null;
+  lsSet('ac.memVersions',S.memVersions);
+  render();
+}
+function openCompare(bId){
+  const i=S.memVersions.findIndex(v=>v.id===bId);
+  const older=S.memVersions[i+1];
+  if(!older){alert('Nessuna versione precedente con cui confrontare.');return;}
+  S.compare={aId:older.id,bId};
+  S.diffAI={loading:false,text:'',error:''};
+  render();
+}
+function diffVersions(o,n){
+  const k=s=>String(s.sc).trim();
+  const oM={},nM={};
+  (o.scene_chiave||[]).forEach(s=>oM[k(s)]=s);
+  (n.scene_chiave||[]).forEach(s=>nM[k(s)]=s);
+  const added=[],removed=[],changed=[];
+  Object.keys(nM).forEach(key=>{
+    if(!oM[key])added.push(nM[key]);
+    else{const a=oM[key],b=nM[key];
+      if(NORM(a.crit)!==NORM(b.crit)||a.nota!==b.nota||a.desc!==b.desc)changed.push({sc:key,from:a,to:b});}
+  });
+  Object.keys(oM).forEach(key=>{if(!nM[key])removed.push(oM[key]);});
+  const oR=new Set(o.rischi||[]),nR=new Set(n.rischi||[]);
+  return{added,removed,changed,
+    rAdd:[...nR].filter(x=>!oR.has(x)),
+    rRem:[...oR].filter(x=>!nR.has(x)),
+    briefingChanged:(o.briefing||'')!==(n.briefing||''),
+    pdlChanged:(o.pdl_summary||'')!==(n.pdl_summary||'')};
+}
+function buildDiffMsg(){
+  const a=S.memVersions.find(v=>v.id===S.compare.aId);
+  const b=S.memVersions.find(v=>v.id===S.compare.bId);
+  if(!a||!b)return null;
+  const dump=m=>`BRIEFING:\n${m.briefing}\n\nPIANO DI LAVORAZIONE:\n${m.pdl_summary}\n\nSCENE CHIAVE:\n${(m.scene_chiave||[]).map(s=>`Sc.${s.sc} [${s.crit}] ${s.desc} — ${s.nota}`).join('\n')}\n\nRISCHI:\n${(m.rischi||[]).join('; ')}`;
+  return`═══ VERSIONE PRECEDENTE (v${a.v}) ═══\n${dump(a)}\n\n\n═══ VERSIONE NUOVA (v${b.v}) ═══\n${dump(b)}`;
+}
+async function runDiff(){
+  if(!S.compare)return;
+  const msg=buildDiffMsg();if(!msg)return;
+  if(S.mode==='manual'){openBridge('diff',SYS_DIFF,msg);return;}
+  S.diffAI={loading:true,text:'',error:''};render();
+  try{const raw=await claude(SYS_DIFF,msg,1200);S.diffAI={loading:false,text:raw.trim(),error:''};}
+  catch(e){S.diffAI={loading:false,text:'',error:e.message||'Errore'};}
+  render();
+}
+
+// ═══════════════════════════ PONTE MANUALE ════════════════════════════
+function openBridge(kind,sys,msg,extra){
+  S.bridge={kind,sys,msg,prompt:sys+'\n\n'+'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'+msg,response:'',error:'',extra:extra||null};
+  render();
+}
+function closeBridge(){S.bridge=null;render();}
+function setMode(m){
+  S.mode=m;localStorage.setItem('ac.mode',m);
+  if(m==='api')S.bridge=null;
+  render();
+}
+function processBridge(){
+  if(!S.bridge)return;
+  const ta=document.getElementById('bridge-resp');
+  const text=(ta?ta.value:S.bridge.response||'').trim();
+  if(!text){S.bridge.error='Incolla prima la risposta di Claude qui sotto.';render();return;}
+  S.bridge.response=text;S.bridge.error='';
+  const kind=S.bridge.kind;
+  try{
+    if(kind==='diff'){
+      S.diffAI={loading:false,text:text.replace(/```[a-z]*\n?/gi,'').trim(),error:''};
+      closeBridge();return;
+    }
+    const j=parseJSON(text);
+    if(kind==='docs')applyDocsResult(j);
+    else if(kind==='day')applyDayResult(j,S.bridge.extra.scenes);
+    closeBridge();
+  }catch(e){
+    S.bridge.error='Non riesco a leggere la risposta. Assicurati di aver incollato il blocco COMPLETO che inizia con { e finisce con } (senza testo aggiunto). Dettaglio: '+(e.message||'formato non valido');
+    render();
+  }
+}
+function copyPrompt(){
+  const t=S.bridge.prompt;
+  const done=()=>{const el=document.getElementById('bridge-copied');if(el){el.style.display='inline-flex';setTimeout(()=>{el.style.display='none';},2000);}};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done).catch(()=>{fallbackCopy();done();});
+  }else{fallbackCopy();done();}
+}
+function fallbackCopy(){
+  const ta=document.getElementById('bridge-prompt');if(!ta)return;
+  ta.removeAttribute('readonly');ta.select();
+  try{document.execCommand('copy');}catch{}
+  ta.setAttribute('readonly','true');window.getSelection()?.removeAllRanges();
+}
+function renderBridge(){
+  const el=document.getElementById('bridge');
+  if(!S.bridge){el.innerHTML='';return;}
+  const meta={
+    docs:{t:'Memoria di produzione',s:'Genera il briefing dai documenti — gratis, tramite claude.ai'},
+    day:{t:'Analisi della giornata',s:'Analizza tutte le scene del giorno in un colpo solo — gratis, tramite claude.ai'},
+    diff:{t:'Confronto versioni',s:'Fatti spiegare cosa è cambiato — gratis, tramite claude.ai'}
+  }[S.bridge.kind]||{t:'Claude',s:''};
+  const hint=S.bridge.kind==='diff'?'Claude risponde in testo normale: incolla tutto.':'Claude risponde con un blocco JSON che inizia con { e finisce con }: incolla tutto, anche le graffe.';
+  el.innerHTML=`<div class="bov">
+    <div class="bx">
+      <div class="bx-head">
+        <div><h3>${meta.t}</h3><div class="sub">${meta.s}</div></div>
+        <button class="bx-x" id="bridge-x">Chiudi ✕</button>
+      </div>
+      <div class="bx-body">
+        <div class="bstep">
+          <div class="bstep-h"><span class="bnum">1</span><b>Copia il prompt e incollalo in Claude</b></div>
+          <textarea class="bprompt" id="bridge-prompt" readonly>${esc(S.bridge.prompt)}</textarea>
+          <div class="brow">
+            <button class="btn sm" id="bridge-copy">Copia prompt</button>
+            <a class="blink" href="https://claude.ai/new" target="_blank" rel="noopener">Apri claude.ai ↗</a>
+            <span class="copied" id="bridge-copied">✓ Copiato</span>
+          </div>
+        </div>
+        <div class="bstep">
+          <div class="bstep-h"><span class="bnum">2</span><b>Incolla qui la risposta di Claude</b></div>
+          <textarea class="bresp" id="bridge-resp" placeholder="Incolla l'intera risposta che ti ha dato Claude…">${esc(S.bridge.response||'')}</textarea>
+          ${S.bridge.error?`<div class="err" style="margin-top:10px">${esc(S.bridge.error)}</div>`:''}
+          <div class="brow">
+            <button class="btn sm" id="bridge-go">Elabora risposta</button>
+            <span class="mode-note">${hint}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('bridge-x').addEventListener('click',closeBridge);
+  document.getElementById('bridge-copy').addEventListener('click',copyPrompt);
+  document.getElementById('bridge-go').addEventListener('click',processBridge);
+  const r=document.getElementById('bridge-resp');
+  r.addEventListener('input',e=>{if(S.bridge)S.bridge.response=e.target.value;});
+}
+
+// ═══════════════════════════ UI HELPERS ═══════════════════════════════
+function pill(c){return`<span class="pill c-${c}"><span class="dot"></span>${LABEL[c]}</span>`;}
+function badge(c){return`<span class="badge c-${c}"><span class="dot"></span>${LABEL[c]}</span>`;}
+
+const DIALTICKS=(()=>{
+  const labels=['11','8','5.6','4','2.8','2','1.4'];
+  let s='';
+  for(let i=0;i<=30;i++){
+    const x=(8+i*6.133).toFixed(2),major=i%5===0;
+    s+=`<line x1="${x}" y1="0" x2="${x}" y2="${major?14:8}" stroke="${major?'#4a5160':'#363c47'}" stroke-width="${major?1:.6}"/>`;
+    if(major)s+=`<text x="${x}" y="31" text-anchor="middle" fill="#5a6170" font-family="IBM Plex Mono,monospace" font-size="6" letter-spacing=".04em">${labels[i/5]}</text>`;
+  }
+  return`<svg viewBox="0 0 200 36" preserveAspectRatio="none" style="display:block;width:100%;height:100%">${s}</svg>`;
+})();
+
+const DIAL_POS={bassa:4,media:50,alta:96};
+
+function sceneCard(s){
+  const noteH=s.note.length?`<div class="scol full"><h5>Note fuoco / tecnica</h5>${s.note.map(n=>`<div class="sli"><span class="d" style="color:var(--alta)">▸</span><span>${esc(n)}</span></div>`).join('')}</div>`:'';
+  const gearH=s.gear.length?`<div class="scol"><h5>Gear</h5>${s.gear.map(n=>`<div class="sli"><span class="d">·</span><span>${esc(n)}</span></div>`).join('')}</div>`:'';
+  const antH=s.anticipa.length?`<div class="scol"><h5>Anticipa</h5>${s.anticipa.map(n=>`<div class="sli"><span class="d" style="color:var(--media)">→</span><span>${esc(n)}</span></div>`).join('')}</div>`:'';
+  return`<div class="scene-card" data-crit="${s.criticita}">
+    <div class="dial">${DIALTICKS}<div class="dial-needle" style="left:4%"></div></div>
+    <div class="sch">
+      <div>
+        <div class="sc-id">SC ${String(s.id).padStart(2,'0')}</div>
+        <div class="sc-title">${esc(s.titolo)}</div>
+        ${s.hdr&&s.hdr!=='Sequenza'?`<div class="sc-hdr">${esc(s.hdr)}</div>`:''}
+      </div>
+      ${badge(s.criticita)}
+    </div>
+    ${s.sintesi?`<div class="synth">${esc(s.sintesi)}</div>`:''}
+    <div class="sgrid">${noteH}${gearH}${antH}</div>
+  </div>`;
+}
+
+// Animazione ghiere diaframmi — chiamata dopo ogni render
+const REDUCE=typeof matchMedia!=='undefined'&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+function playDials(){
+  const cards=[...document.querySelectorAll('.scene-card')];
+  if(!cards.length)return;
+  cards.forEach(c=>{
+    const n=c.querySelector('.dial-needle');if(!n)return;
+    const crit=c.dataset.crit||'bassa';
+    const target=DIAL_POS[crit]+'%';
+    if(REDUCE){n.style.left=target;return;}
+    n.style.transition='none';n.style.left='4%';
+  });
+  if(!REDUCE) requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    cards.forEach((c,i)=>{
+      const n=c.querySelector('.dial-needle');if(!n)return;
+      const crit=c.dataset.crit||'bassa';
+      setTimeout(()=>{n.style.transition='left .9s cubic-bezier(.2,1,.32,1)';n.style.left=DIAL_POS[crit]+'%';},i*140);
+    });
+  }));
+}
+
+function bsec(title,items,icon,col){
+  if(!items.length)return'';
+  const rows=items.map((x,i)=>`<div class="bli"><span class="mk" style="color:${col||'var(--mu2)'}">${icon==='num'?String(i+1).padStart(2,'0'):icon}</span><span>${esc(x)}</span></div>`).join('');
+  return`<div class="bsec"><h3>${esc(title)}</h3>${rows}</div>`;
+}
+
+function docRow(key,label){
+  const d=S.docs[key];
+  const dot=`<span class="dot" style="background:${d?'var(--acc)':'var(--b2)'};margin-right:8px;vertical-align:middle"></span>`;
+  return`<div class="field">
+    <label class="lbl">${dot}${label}</label>
+    <div class="row">
+      <label class="doc-btn">
+        <input type="file" id="f-${key}" accept=".pdf" style="display:none">
+        📄 ${d?'Sostituisci PDF':'Carica PDF'}
+      </label>
+      <span id="fn-${key}">${d?`<span class="doc-fn">✓ ${esc(d.nome)}</span>`:`<span style="font-family:var(--mono);font-size:11px;color:var(--mu2)">Non caricato</span>`}</span>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════ VIEWS ════════════════════════════════════
+function verDocLine(ver){
+  const parts=[];
+  if(ver.docNames?.sceneggiatura)parts.push('Scen.');
+  if(ver.docNames?.spoglio)parts.push('Spoglio');
+  if(ver.docNames?.pdl)parts.push('PDL');
+  return parts.length?parts.join(' · '):'documenti non registrati';
+}
+function versionHistoryHTML(){
+  if(S.memVersions.length<1)return'';
+  const rows=S.memVersions.map((ver,i)=>{
+    const cur=ver.id===S.memCurrentId;
+    const hasOlder=i<S.memVersions.length-1;
+    return`<div class="ver-item${cur?' cur':''}">
+      <div class="ver-num">v${ver.v}</div>
+      <div class="ver-meta">
+        <div class="vd">${new Date(ver.ts).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'})} · ${new Date(ver.ts).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</div>
+        <div class="vf">${esc(verDocLine(ver))} · ${ver.scene_chiave?.length||0} scene chiave</div>
+      </div>
+      <div class="ver-acts">
+        ${cur?`<span class="ver-cur-badge">Corrente</span>`:`<button class="mini" data-setcur="${ver.id}">Usa</button>`}
+        ${hasOlder?`<button class="mini" data-compare="${ver.id}">Confronta</button>`:''}
+        ${!cur?`<button class="mini danger" data-delver="${ver.id}">✕</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  return`<div class="sec">
+    <div class="sectit"><h2>Cronologia versioni</h2><span class="n">${S.memVersions.length} ${S.memVersions.length===1?'versione':'versioni'}</span></div>
+    ${rows}
+    ${compareHTML()}
+    <div class="hint" style="margin-top:4px">Ogni volta che premi <b>Analizza e memorizza</b> viene salvata una nuova versione. <b>Usa</b> rende corrente una versione (anche tornando indietro). <b>Confronta</b> mostra cosa è cambiato rispetto alla versione precedente. Le giornate in archivio ricordano con quale versione sono state analizzate.</div>
+  </div>`;
+}
+function diffLine(cls,sym,scn,txt){
+  return`<div class="diff ${cls}"><span class="s">${sym}</span>${scn?`<span class="scn">Sc.${esc(scn)}</span>`:''}<span>${esc(txt)}</span></div>`;
+}
+function compareHTML(){
+  if(!S.compare)return'';
+  const a=S.memVersions.find(v=>v.id===S.compare.aId);
+  const b=S.memVersions.find(v=>v.id===S.compare.bId);
+  if(!a||!b)return'';
+  const d=diffVersions(a,b);
+  let groups='';
+  // Scene
+  let sc='';
+  d.added.forEach(s=>sc+=diffLine('add','+',s.sc,`${s.desc} — ${s.nota} [${LABEL[NORM(s.crit)]}]`));
+  d.removed.forEach(s=>sc+=diffLine('rem','−',s.sc,`${s.desc} — ${s.nota}`));
+  d.changed.forEach(c=>{
+    const cf=NORM(c.from.crit),ct=NORM(c.to.crit);
+    let detail='';
+    if(cf!==ct)detail+=`<div class="crit-arrow">${badge(cf)} <span style="color:var(--mu2)">→</span> ${badge(ct)}</div>`;
+    if(c.from.nota!==c.to.nota)detail+=`<div style="font-size:12.5px;color:var(--mu);margin-top:3px">nota: ${esc(c.to.nota)}</div>`;
+    if(c.from.desc!==c.to.desc)detail+=`<div style="font-size:12.5px;color:var(--mu);margin-top:3px">${esc(c.to.desc)}</div>`;
+    sc+=`<div class="diff chg"><span class="s">~</span><span class="scn">Sc.${esc(c.sc)}</span><span>${detail}</span></div>`;
+  });
+  if(!sc)sc=`<div class="cmp-none">Nessuna scena chiave aggiunta, rimossa o modificata.</div>`;
+  groups+=`<div class="cmp-grp"><h4>Scene chiave</h4>${sc}</div>`;
+  // Rischi
+  let ri='';
+  d.rAdd.forEach(r=>ri+=diffLine('add','+','',r));
+  d.rRem.forEach(r=>ri+=diffLine('rem','−','',r));
+  if(!ri)ri=`<div class="cmp-none">Rischi tecnici invariati.</div>`;
+  groups+=`<div class="cmp-grp"><h4>Rischi produzione</h4>${ri}</div>`;
+  // Briefing / PDL
+  let tx='';
+  if(d.briefingChanged)tx+=`<div class="diff chg" style="margin-bottom:10px"><span class="s">~</span><span><b style="font-family:var(--mono);font-size:11px">BRIEFING aggiornato:</b><div style="margin-top:5px;color:#d0cfca;line-height:1.55">${esc(b.briefing)}</div></span></div>`;
+  if(d.pdlChanged)tx+=`<div class="diff chg"><span class="s">~</span><span><b style="font-family:var(--mono);font-size:11px">PDL aggiornato:</b><div style="margin-top:5px;color:#d0cfca;line-height:1.55">${esc(b.pdl_summary)}</div></span></div>`;
+  if(!tx)tx=`<div class="cmp-none">Briefing e sintesi PDL invariati.</div>`;
+  groups+=`<div class="cmp-grp"><h4>Briefing &amp; PDL</h4>${tx}</div>`;
+  // AI explain block
+  let aiBlock='';
+  if(S.diffAI.loading)aiBlock=`<div class="diff-ai"><div class="row" style="gap:11px"><div class="spin sm"></div><span style="font-family:var(--mono);font-size:12px;color:var(--mu)">Sto leggendo le differenze…</span></div></div>`;
+  else if(S.diffAI.text)aiBlock=`<div class="diff-ai"><div class="mlbl" style="font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:9px">Cosa cambia per il fuoco</div><div class="ai-txt">${esc(S.diffAI.text)}</div></div>`;
+  else if(S.diffAI.error)aiBlock=`<div class="diff-ai"><div class="err" style="margin:0">${esc(S.diffAI.error)}</div></div>`;
+  else aiBlock=`<div class="diff-ai"><button id="btn-diffai" class="btn ghost sm">${S.mode==='manual'?"Spiega le differenze (via claude.ai)":"Spiega le differenze con l'AI"}</button></div>`;
+  return`<div class="cmp">
+    <div class="cmp-head">
+      <div><b>Confronto v${a.v} → v${b.v}</b><small>${new Date(a.ts).toLocaleDateString('it-IT')} vs ${new Date(b.ts).toLocaleDateString('it-IT')}</small></div>
+      <button class="mini" id="btn-closecmp">Chiudi ✕</button>
+    </div>
+    <div class="cmp-body">${groups}</div>
+    ${aiBlock}
+  </div>`;
+}
+
+function renderTopbar(){
+  document.getElementById('topbar').innerHTML=`<div class="tbar-inner">
+    <div class="brand">
+      <div class="bmark"></div>
+      <div class="btxt"><b>First AC</b><small>AI Advisor · reparto macchina</small></div>
+    </div>
+    <div class="tabrow">
+      ${['oggi','produzione','archivio'].map(v=>`<button class="tab${S.view===v?' on':''}" data-v="${v}">${v==='oggi'?'Oggi':v==='produzione'?'Produzione':'Archivio'}</button>`).join('')}
+      <span class="spacer"></span>
+      <div class="mseg" style="align-self:center;margin-bottom:8px">
+        <button class="${S.mode==='manual'?'on man':''}" data-mode="manual">✋ Manuale</button>
+        <button class="${S.mode==='api'?'on api':''}" data-mode="api">⚡ API</button>
+      </div>
+    </div>
+  </div>`;
+  document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{S.view=b.dataset.v;render();}));
+  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+}
+
+function renderOggi(){
+  let h=`<div class="shell">`;
+  h+=`<div class="modebar no-print"><span class="ml">Modalità</span>${S.mode==='manual'
+    ?`<span class="mode-note"><b style="color:var(--acc)">Manuale · gratis</b> — l'app prepara il prompt, tu lo porti su claude.ai e incolli la risposta.</span>`
+    :`<span class="mode-note"><b style="color:var(--amb)">Claude API</b> — analisi automatica, costo a consumo (pochi centesimi).</span>`}</div>`;
+
+  // Input card
+  h+=`<div class="sec no-print">
+    <div class="sectit"><h2>La giornata</h2><span class="n">ODG + scene → analisi fuoco</span></div>
+    <div class="card" style="padding:18px">
+      <div class="row" style="margin-bottom:16px;align-items:flex-end;gap:16px">
+        <div style="flex:0 0 180px">
+          <label class="lbl">Data</label>
+          <input id="inp-data" class="inp mono" style="resize:none" type="text" value="${esc(S.day.data)}" placeholder="2026-06-22">
+        </div>
+        ${S.profile.nome?`<div style="padding-bottom:11px"><span class="lbl" style="display:inline;margin:0">Produzione</span> <span style="font-family:var(--mono);font-size:13px;color:var(--tx)">${esc(S.profile.nome)}</span></div>`:''}
+        <div style="padding-bottom:11px">
+          ${S.memoria
+            ?`<span class="row" style="gap:7px"><span class="dot" style="background:var(--acc)"></span><span class="ok">Memoria v${S.memoria.v} attiva</span></span>`
+            :`<span class="warn">⚠ Nessuna memoria — carica i PDF in Produzione</span>`}
+        </div>
+      </div>
+      <div class="field">
+        <label class="lbl">ODG del giorno <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9.5px">(incolla testo o carica PDF)</span></label>
+        <div class="row" style="margin-bottom:8px">
+          <label class="doc-btn"><input type="file" id="f-odg" accept=".pdf" style="display:none">📄 Carica PDF ODG</label>
+          <span id="fn-odg" style="font-family:var(--mono);font-size:11px;color:var(--mu2)"></span>
+        </div>
+        <textarea id="inp-odg" class="inp" rows="3" placeholder="Es. set ore 7:30, prime scene notti Tevere poi interni appartamento pomeriggio…">${esc(S.day.odg)}</textarea>
+      </div>
+      <div class="field">
+        <label class="lbl">Scene del giorno — testo sceneggiatura</label>
+        <textarea id="inp-scene" class="inp mono" rows="9" placeholder="Incolla le scene così come stanno nella sceneggiatura.&#10;Vengono riconosciute dagli stacchi INT. / EST.&#10;&#10;INT. APPARTAMENTO - NOTTE&#10;...&#10;&#10;EST. LUNGOTEVERE - NOTTE&#10;...">${esc(S.day.scene)}</textarea>
+        <div class="hint">Le scene vengono identificate dagli stacchi (INT./EST./SCENA). Ognuna è analizzata separatamente come farebbe un primo AC.</div>
+      </div>
+      <div class="row">
+        <button id="btn-go" class="btn" ${S.loading?'disabled':''}>${S.loading?'Analisi in corso…':S.mode==='manual'?'Prepara analisi →':'Analizza la giornata'}</button>
+        ${S.mode==='api'&&!S.apiKey?`<span class="warn">⚠ Imposta la API key in Produzione → Impostazioni</span>`:''}
+        ${S.mode==='manual'?`<span class="mode-note">Genera il prompt per claude.ai, poi incolli la risposta</span>`:''}
+      </div>
+      ${S.error?`<div class="err">${esc(S.error)}</div>`:''}
+    </div>
+  </div>`;
+
+  // Loading
+  if(S.loading){
+    h+=`<div class="card" style="margin-top:18px;padding:30px;text-align:center">
+      <div class="spin" style="margin:0 auto 14px"></div>
+      <div style="font-family:var(--mono);font-size:12.5px;letter-spacing:.04em">${esc(S.step)}</div>
+      ${S.sub?`<div style="font-size:12px;color:var(--mu2);margin-top:6px">${esc(S.sub)}</div>`:''}
+    </div>`;
+  }
+
+  // Analysis result
+  if(S.analysis&&!S.loading){
+    const a=S.analysis;
+    h+=`<div style="margin-top:26px">
+      <div class="print-head">${esc(a.nome||'Giornata di lavorazione')} — ${fmtDate(a.data)}</div>
+      <div class="sectit no-print"><h2>Analisi</h2><span class="n">${a.scenes.length} ${a.scenes.length===1?'scena':'scene'}</span></div>
+      ${a.memVersionId && S.memCurrentId && a.memVersionId!==S.memCurrentId
+        ?`<div class="vbanner no-print">Questa giornata è stata analizzata con la <b>memoria v${a.memV||'?'}</b>, che non è più la versione corrente${S.memoria?` (ora v${S.memoria.v})`:''}. I risultati riflettono sceneggiatura e PDL di allora. Per riallineare, rilancia l'analisi in <b>Oggi</b>.</div>`
+        :''}
+      <div class="card">
+        <div class="dhead">
+          <div class="dmeta">
+            <div><span class="lbl">Data</span><b>${fmtDate(a.data)}</b></div>
+            <div><span class="lbl">Scene</span><b>${String(a.scenes.length).padStart(2,'0')}</b></div>
+          </div>
+          <div style="text-align:right"><span class="lbl">Criticità giornata</span><div style="margin-top:8px">${pill(a.crit)}</div></div>
+        </div>
+        ${a.overview?`<div class="ov">${esc(a.overview)}</div>`:''}
+        ${bsec('Checklist inizio giornata',a.checklist,'num','var(--mu2)')}
+        ${bsec('Da anticipare',a.anticipa,'→','var(--amb)')}
+        ${bsec('Da chiarire con operatore / DoP / regia',a.domande,'?','var(--amb)')}
+      </div>
+
+      <div class="sectit no-print" style="margin-top:22px"><h2>Scene</h2><span class="n">dettaglio fuoco</span></div>
+      ${a.scenes.map(s=>sceneCard(s)).join('')}
+
+      <div class="row no-print" style="margin-top:22px">
+        <button id="btn-save" class="btn ghost sm">Salva in archivio</button>
+        <button id="btn-print" class="btn ghost sm">Esporta PDF</button>
+        <span id="save-ok" class="saved" style="display:none"><span class="dot" style="background:var(--acc)"></span>Salvata</span>
+        <span class="spacer"></span>
+        <button id="btn-reset" class="btn ghost sm">Nuova giornata</button>
+      </div>
+    </div>`;
+  }
+
+  h+='</div>';
+  document.getElementById('main').innerHTML=h;
+
+  // Listeners
+  document.getElementById('btn-go')?.addEventListener('click',()=>{
+    S.day.data=document.getElementById('inp-data').value;
+    S.day.odg=document.getElementById('inp-odg').value;
+    S.day.scene=document.getElementById('inp-scene').value;
+    runDay();
+  });
+  document.getElementById('f-odg')?.addEventListener('change',async e=>{
+    const f=e.target.files[0];if(!f)return;
+    const el=document.getElementById('fn-odg');el.textContent='Estrazione…';
+    try{const t=await extractText(f);document.getElementById('inp-odg').value=t;el.textContent='✓ '+f.name;}
+    catch{el.textContent='✗ Errore PDF';}
+  });
+  document.getElementById('btn-save')?.addEventListener('click',saveDay);
+  document.getElementById('btn-print')?.addEventListener('click',()=>window.print());
+  document.getElementById('btn-reset')?.addEventListener('click',()=>{S.analysis=null;S.day.scene='';S.day.odg='';render();});
+}
+
+function renderProduzione(){
+  const m=S.memoria;
+  let h=`<div class="shell">`;
+  h+=`<div class="modebar"><span class="ml">Modalità</span>${S.mode==='manual'
+    ?`<span class="mode-note"><b style="color:var(--acc)">Manuale · gratis</b> — i pulsanti preparano un prompt da incollare in claude.ai.</span>`
+    :`<span class="mode-note"><b style="color:var(--amb)">Claude API</b> — elaborazione automatica, richiede la API key qui sotto.</span>`}</div>`;
+
+  // Documenti
+  h+=`<div class="sec">
+    <div class="sectit"><h2>Documenti produzione</h2><span class="n">sceneggiatura · spoglio · piano di lavorazione</span></div>
+    <div class="card" style="padding:18px">
+      ${docRow('sceneggiatura','Sceneggiatura')}
+      ${docRow('spoglio','Spoglio della sceneggiatura')}
+      ${docRow('pdl','Piano di lavorazione')}
+      ${S.memLoading
+        ?`<div class="row" style="gap:12px;padding:8px 0"><div class="spin sm"></div><span style="font-family:var(--mono);font-size:12px;color:var(--mu)">${esc(S.memStep)}</span></div>`
+        :`<div class="row" style="margin-top:6px">
+            <button id="btn-memdocs" class="btn">${S.mode==='manual'?'Prepara prompt →':'Analizza e memorizza'}</button>
+            ${m?`<span class="saved"><span class="dot" style="background:var(--acc)"></span>Aggiornata ${new Date(m.ts).toLocaleDateString('it-IT')}</span>`:''}
+          </div>`
+      }
+      ${S.memError?`<div class="err">${esc(S.memError)}</div>`:''}
+      <div class="hint" style="margin-top:14px">Carica i documenti una volta a inizio produzione. Claude li legge, estrae le scene critiche e costruisce una memoria che viene usata in ogni analisi giornaliera.</div>
+    </div>
+  </div>`;
+
+  // Memoria preview
+  if(m&&!S.memLoading){
+    h+=`<div class="card" style="margin-top:12px">
+      <div class="mem-box">
+        <div class="row" style="justify-content:space-between;align-items:baseline">
+          <div class="mlbl" style="margin-bottom:0">Briefing reparto macchina</div>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--acc)">memoria v${m.v} corrente</span>
+        </div>
+        <div class="mem-text" style="margin-top:10px">${esc(m.briefing)}</div>
+      </div>
+      ${m.rischi?.length?`<div style="padding:0 18px 18px;border-top:1px solid var(--b);padding-top:16px;margin-top:0">
+        <div class="mlbl">Rischi tecnici produzione</div>
+        ${m.rischi.map(r=>`<div class="sli"><span class="d" style="color:var(--red)">▸</span><span>${esc(r)}</span></div>`).join('')}
+      </div>`:''}
+      ${m.scene_chiave?.length?`<div style="padding:0 18px 18px;border-top:1px solid var(--b);padding-top:16px">
+        <div class="mlbl">Scene chiave mappate</div>
+        ${m.scene_chiave.map(s=>`<div class="sli"><span class="d" style="color:var(--mu2);width:30px">Sc.${esc(s.sc)}</span><span style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap">${badge(NORM(s.crit))} <span>${esc(s.desc)}</span><span style="color:var(--mu2)">—</span><span>${esc(s.nota)}</span></span></div>`).join('')}
+      </div>`:''}
+    </div>`;
+  }
+
+  // Cronologia versioni
+  if(!S.memLoading) h+=versionHistoryHTML();
+
+  // Attrezzatura
+  h+=`<div class="sec">
+    <div class="sectit"><h2>Attrezzatura</h2><span class="n">contesto usato in ogni analisi</span></div>
+    <div class="card" style="padding:18px">
+      <div class="field"><label class="lbl">Titolo produzione</label><input id="prof-nome" class="inp" type="text" value="${esc(S.profile.nome)}" placeholder="Es. Nobody's Diary"></div>
+      <div class="field"><label class="lbl">Mezzi / attrezzatura a disposizione</label><textarea id="prof-gear" class="inp" rows="4" placeholder="Camera, ottiche, follow focus wireless, monitor, transmitter, batterie…&#10;Es. ARRI Alexa 35, Cooke S4, Hi-5 wireless, Swit K15 + Teradek Bolt 4K, Blueshape…">${esc(S.profile.gear)}</textarea></div>
+      <div class="field"><label class="lbl">Note produzione</label><textarea id="prof-note" class="inp" rows="3" placeholder="Location ricorrenti, particolarità, accordi tecnici, vincoli…">${esc(S.profile.note)}</textarea></div>
+      <div class="row">
+        <button id="btn-sprof" class="btn">Salva</button>
+        <span id="prof-ok" class="saved" style="display:none"><span class="dot" style="background:var(--acc)"></span>Salvato</span>
+      </div>
+    </div>
+  </div>`;
+
+  // API Key + impostazioni
+  h+=`<div class="sec">
+    <div class="sectit"><h2>Impostazioni</h2><span class="n">solo per la modalità API</span></div>
+    <div class="card" style="padding:18px">
+      ${S.mode==='manual'?`<div class="vbanner" style="margin:0 0 16px">Sei in <b>modalità Manuale</b>: non ti serve nessuna API key. Compila questo campo solo se passi alla modalità <b>⚡ API</b> per l'analisi automatica.</div>`:''}
+      <div class="field">
+        <label class="lbl">Anthropic API Key</label>
+        <input id="inp-key" class="inp mono" type="password" value="${esc(S.apiKey)}" placeholder="sk-ant-api03-…">
+        <div class="hint">Ottieni la key su <b>console.anthropic.com</b> → API Keys. Salvata solo in questo browser (localStorage), non trasmessa a terze parti. Costo stimato: pochi centesimi per giornata di analisi.</div>
+      </div>
+      <div class="row">
+        <button id="btn-skey" class="btn ghost sm">Salva API key</button>
+        <span id="key-ok" class="saved" style="display:none"><span class="dot" style="background:var(--acc)"></span>Salvata</span>
+        ${S.apiKey?`<span class="ok">● Attiva</span>`:''}
+      </div>
+    </div>
+    <div class="ft">Tutti i dati (memoria, archivio, profilo) restano sul tuo browser in localStorage. In modalità API i testi vengono inviati ad Anthropic su HTTPS solo quando premi Analizza. In modalità Manuale nulla viene inviato automaticamente: sei tu a portare il prompt su claude.ai.</div>
+  </div>`;
+
+  h+='</div>';
+  document.getElementById('main').innerHTML=h;
+
+  // Doc listeners
+  ['sceneggiatura','spoglio','pdl'].forEach(key=>{
+    document.getElementById('f-'+key)?.addEventListener('change',async e=>{
+      const f=e.target.files[0];if(!f)return;
+      document.getElementById('fn-'+key).innerHTML='<span style="font-family:var(--mono);font-size:11px;color:var(--mu2)">Estrazione…</span>';
+      try{
+        const t=await extractText(f);
+        S.docs[key]={nome:f.name,testo:t,ts:Date.now()};
+        lsSet('ac.docs',S.docs);render();
+      }catch{
+        document.getElementById('fn-'+key).innerHTML='<span style="font-family:var(--mono);font-size:11px;color:var(--red)">✗ Errore lettura PDF</span>';
+      }
+    });
+  });
+  document.getElementById('btn-memdocs')?.addEventListener('click',runDocs);
+  document.querySelectorAll('[data-compare]').forEach(b=>b.addEventListener('click',()=>openCompare(b.dataset.compare)));
+  document.querySelectorAll('[data-setcur]').forEach(b=>b.addEventListener('click',()=>setCurrentVersion(b.dataset.setcur)));
+  document.querySelectorAll('[data-delver]').forEach(b=>b.addEventListener('click',()=>deleteVersion(b.dataset.delver)));
+  document.getElementById('btn-closecmp')?.addEventListener('click',()=>{S.compare=null;render();});
+  document.getElementById('btn-diffai')?.addEventListener('click',runDiff);
+  document.getElementById('btn-sprof')?.addEventListener('click',()=>{
+    S.profile.nome=document.getElementById('prof-nome').value;
+    S.profile.gear=document.getElementById('prof-gear').value;
+    S.profile.note=document.getElementById('prof-note').value;
+    lsSet('ac.profile',S.profile);
+    const el=document.getElementById('prof-ok');el.style.display='inline-flex';
+    setTimeout(()=>{el.style.display='none';},2000);
+  });
+  document.getElementById('btn-skey')?.addEventListener('click',()=>{
+    S.apiKey=document.getElementById('inp-key').value.trim();
+    localStorage.setItem('ac.key',S.apiKey);
+    const el=document.getElementById('key-ok');el.style.display='inline-flex';
+    setTimeout(()=>{el.style.display='none';render();},1500);
+  });
+}
+
+function renderArchivio(){
+  let h=`<div class="shell"><div class="sec">
+    <div class="sectit"><h2>Archivio</h2><span class="n">${S.index.length} ${S.index.length===1?'giornata':'giornate'} salvate</span></div>`;
+  if(!S.index.length){
+    h+=`<div class="card" style="padding:44px 24px;text-align:center;color:var(--mu2)"><div style="font-size:13px;line-height:1.7;max-width:380px;margin:0 auto">Nessuna giornata salvata.<br>Analizza una giornata in <b style="color:var(--mu)">Oggi</b> e premi <b style="color:var(--mu)">Salva in archivio</b>:<br>la memoria viene usata per correlazioni nelle analisi successive.</div></div>`;
+  }else{
+    h+=S.index.map(d=>{
+      const col=d.crit==='alta'?'var(--red)':d.crit==='media'?'var(--amb)':'var(--bassa)';
+      return`<button class="arc-btn" data-d="${esc(d.data)}">
+        <span class="dot" style="background:${col}"></span>
+        <span class="arc-info"><b>${fmtDate(d.data)}</b><span>${d.nome?esc(d.nome)+' · ':''}${esc(d.titoli||'—')}</span></span>
+        ${d.memV?`<span class="arc-count" style="color:${d.memV===S.memoria?.v?'var(--acc)':'var(--mu2)'}">mem v${d.memV}</span>`:''}
+        <span class="arc-count">${String(d.scene_count).padStart(2,'0')} SC</span>
+      </button>`;
+    }).join('');
+  }
+  h+=`<div class="ft">Le giornate archiviate vengono incluse come contesto nelle analisi successive, così l'agente può fare correlazioni tra scene e giornate della stessa produzione.</div>
+  </div></div>`;
+  document.getElementById('main').innerHTML=h;
+  document.querySelectorAll('.arc-btn').forEach(b=>b.addEventListener('click',()=>loadDay(b.dataset.d)));
+}
+
+// ═══════════════════════════ RENDER ═══════════════════════════════════
+function render(){
+  renderTopbar();
+  ({oggi:renderOggi,produzione:renderProduzione,archivio:renderArchivio}[S.view]||renderOggi)();
+  renderBridge();
+  requestAnimationFrame(playDials);
+}
+
+render();
+</script>
+</body>
+</html>
