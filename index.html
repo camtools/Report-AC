@@ -353,7 +353,7 @@ const RANK={alta:3,media:2,bassa:1};
 const LABEL={alta:'Alta',media:'Media',bassa:'Bassa'};
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(iso){
-  try{return new Date(iso+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});}
+  try{const d=new Date(iso+'T00:00:00');return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();}
   catch{return iso;}
 }
 function splitScenes(text){
