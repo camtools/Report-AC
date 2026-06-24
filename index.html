@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Shot Report · AI Assistant</title>
 <link rel="icon" href="icon.jpg" type="image/jpeg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f08a24">
+<meta name="description" content="AI Assistant per l'analisi reparto macchina — primo assistente operatore">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -234,16 +237,22 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 // ═══════════════════════════ STATE ════════════════════════════════════
 function today(){ return new Date().toISOString().slice(0,10); }
 
+function loadTodayDay(){
+  const t=today();
+  const saved=lsGet('ac.day.'+t,null);
+  return saved||{data:t,odg:'',scene:''};
+}
+
 const S={
   view:'oggi',
   apiKey: localStorage.getItem('ac.key')||'',
-  profile: lsGet('ac.profile',{nome:'',gear:'',note:''}),
-  docs:    lsGet('ac.docs',   {sceneggiatura:null,spoglio:null,pdl:null,listamateriale:null}),
+  profile: lsGet('ac.profile',{nome:'',gear:'',note:'',type:'film'}),
+  docs:    lsGet('ac.docs',   {sceneggiatura:null,spoglio:null,pdl:null,listamateriale:null,sceneggiature:[]}),
   memVersions: lsGet('ac.memVersions',[]),
   memCurrentId: lsGet('ac.memCurrentId',null),
   memoria: null,            // puntatore alla versione corrente (impostato sotto)
   index:   lsGet('ac.index',  []),
-  day:     {data:today(),odg:'',scene:''},
+  day:     loadTodayDay(),
   analysis: null,
   loading:false, step:'', sub:'', error:'',
   memLoading:false, memStep:'', memError:'',
@@ -273,6 +282,7 @@ if(!S.docs.listamateriale){S.docs.listamateriale=null;lsSet('ac.docs',S.docs);}
 // ═══════════════════════════ STORAGE ══════════════════════════════════
 function lsGet(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+function saveDayState(){lsSet('ac.day.'+S.day.data,S.day);}
 
 // ═══════════════════════════ PDF ══════════════════════════════════════
 async function extractText(file){
@@ -402,7 +412,15 @@ function prodCtx(){
 // ═══════════════════════════ BUSINESS LOGIC ═══════════════════════════
 function buildDocsMsg(){
   let msg=prodCtx()+'\n\n';
-  if(S.docs.sceneggiatura)msg+='=== SCENEGGIATURA ===\n'+S.docs.sceneggiatura.testo+'\n\n';
+  if(S.profile.type==='film'){
+    if(S.docs.sceneggiatura)msg+='=== SCENEGGIATURA ===\n'+S.docs.sceneggiatura.testo+'\n\n';
+  }else{
+    if(S.docs.sceneggiature?.length){
+      S.docs.sceneggiature.forEach((s,i)=>{
+        msg+=`=== SCENEGGIATURA ${i+1} (${s.nome}) ===\n${s.testo}\n\n`;
+      });
+    }
+  }
   if(S.docs.spoglio)msg+='=== SPOGLIO ===\n'+S.docs.spoglio.testo+'\n\n';
   if(S.docs.pdl)msg+='=== PIANO DI LAVORAZIONE ===\n'+S.docs.pdl.testo+'\n\n';
   msg+='Crea il briefing di produzione per il reparto macchina.';
@@ -411,13 +429,18 @@ function buildDocsMsg(){
 function applyDocsResult(j){
   const ts=Date.now();
   const vnum=S.memVersions.reduce((m,v)=>Math.max(m,v.v||0),0)+1;
+  const docNames={
+    spoglio:S.docs.spoglio?.nome||null,
+    pdl:S.docs.pdl?.nome||null
+  };
+  if(S.profile.type==='film'){
+    docNames.sceneggiatura=S.docs.sceneggiatura?.nome||null;
+  }else{
+    docNames.sceneggiature=(S.docs.sceneggiature||[]).map(s=>s.nome);
+  }
   const ver={
     id:'v'+ts, v:vnum, ts,
-    docNames:{
-      sceneggiatura:S.docs.sceneggiatura?.nome||null,
-      spoglio:S.docs.spoglio?.nome||null,
-      pdl:S.docs.pdl?.nome||null
-    },
+    docNames,
     briefing:j.briefing||'',
     scene_chiave:Array.isArray(j.scene_chiave)?j.scene_chiave:[],
     pdl_summary:j.pdl_summary||'',
@@ -431,7 +454,8 @@ function applyDocsResult(j){
   S.compare=null;
 }
 async function runDocs(){
-  if(!S.docs.sceneggiatura&&!S.docs.spoglio&&!S.docs.pdl){S.memError='Carica almeno un documento prima di analizzare.';render();return;}
+  const hasSceneggiatura=S.profile.type==='film'?S.docs.sceneggiatura:(S.docs.sceneggiature?.length>0);
+  if(!hasSceneggiatura&&!S.docs.spoglio&&!S.docs.pdl){S.memError='Carica almeno un documento prima di analizzare.';render();return;}
   const msg=buildDocsMsg();
   if(S.mode==='manual'){openBridge('docs',SYS_DOCS,msg);return;}
   S.memLoading=true;S.memError='';S.memStep='Analisi documenti in corso…';render();
@@ -741,6 +765,34 @@ function docRow(key,label){
   </div>`;
 }
 
+function sceneggiatureRow(){
+  const list=S.docs.sceneggiature||[];
+  const hasAny=list.length>0;
+  const dot=`<span class="dot" style="background:${hasAny?'var(--acc)':'var(--b2)'};margin-right:8px;vertical-align:middle"></span>`;
+  let html=`<div class="field">
+    <label class="lbl">${dot}Sceneggiature (serie)</label>
+    <div class="row" style="margin-bottom:8px">
+      <label class="doc-btn">
+        <input type="file" id="f-sceneggiature-add" accept=".pdf" style="display:none">
+        📄 Aggiungi sceneggiatura
+      </label>
+    </div>`;
+  if(hasAny){
+    html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
+    list.forEach((s,i)=>{
+      html+=`<div class="row" style="gap:8px;padding:8px;background:var(--b);border-radius:6px">
+        <span class="doc-fn">✓ ${esc(s.nome)}</span>
+        <button id="del-sceneggiature-${i}" class="doc-del-btn" style="background:none;border:none;color:var(--mu2);cursor:pointer;padding:0;font-size:14px;flex:none;margin-left:auto" title="Elimina PDF">✕</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }else{
+    html+=`<span style="font-family:var(--mono);font-size:11px;color:var(--mu2)">Nessuna sceneggiatura caricata</span>`;
+  }
+  html+=`</div>`;
+  return html;
+}
+
 // ═══════════════════════════ VIEWS ════════════════════════════════════
 function verDocLine(ver){
   const parts=[];
@@ -957,22 +1009,28 @@ function renderOggi(){
   document.getElementById('btn-go')?.addEventListener('click',()=>{
     const dval=document.getElementById('inp-data').value;
     const parts=dval.match(/(\d+)-(\d+)-(\d+)/);
-    if(parts){const d=new Date(parts[3],parseInt(parts[2])-1,parseInt(parts[1]));S.day.data=d.toISOString().slice(0,10);}
+    if(parts){
+      saveDayState();
+      const d=new Date(parts[3],parseInt(parts[2])-1,parseInt(parts[1]));
+      const newDate=d.toISOString().slice(0,10);
+      S.day=lsGet('ac.day.'+newDate,{data:newDate,odg:'',scene:''});
+    }
     runDay();
   });
   document.getElementById('f-odg')?.addEventListener('change',async e=>{
     const f=e.target.files[0];if(!f)return;
     const el=document.getElementById('fn-odg');el.textContent='Estrazione…';
-    try{const t=await extractText(f);S.day.odg=t;render();}
+    try{const t=await extractText(f);S.day.odg=t;saveDayState();render();}
     catch{el.textContent='✗ Errore PDF';}
   });
   document.getElementById('del-odg')?.addEventListener('click',()=>{
     S.day.odg='';
+    saveDayState();
     render();
   });
   document.getElementById('btn-save')?.addEventListener('click',saveDay);
   document.getElementById('btn-print')?.addEventListener('click',()=>window.print());
-  document.getElementById('btn-reset')?.addEventListener('click',()=>{S.analysis=null;S.day.scene='';S.day.odg='';render();});
+  document.getElementById('btn-reset')?.addEventListener('click',()=>{S.analysis=null;S.day.scene='';S.day.odg='';saveDayState();render();});
 }
 
 function renderProduzione(){
@@ -983,7 +1041,17 @@ function renderProduzione(){
   h+=`<div class="sec">
     <div class="sectit"><h2>Documenti</h2></div>
     <div class="card" style="padding:18px">
-      ${docRow('sceneggiatura','Sceneggiatura')}
+      <!-- Tipo produzione -->
+      <div style="margin-bottom:18px">
+        <label class="lbl">Tipo produzione</label>
+        <div class="row" style="gap:8px">
+          <button id="btn-type-film" class="btn ${S.profile.type==='film'?'':'ghost'} sm" style="padding:8px 16px">FILM</button>
+          <button id="btn-type-serie" class="btn ${S.profile.type==='serie'?'':'ghost'} sm" style="padding:8px 16px">SERIE</button>
+        </div>
+      </div>
+
+      <!-- Sceneggiatura/Sceneggiature -->
+      ${S.profile.type==='film'?docRow('sceneggiatura','Sceneggiatura'):sceneggiatureRow()}
       ${docRow('spoglio','Spoglio della sceneggiatura')}
       ${docRow('pdl','Piano di lavorazione')}
       ${docRow('listamateriale','Lista materiale')}
@@ -1041,6 +1109,18 @@ function renderProduzione(){
   h+='</div>';
   document.getElementById('main').innerHTML=h;
 
+  // Tipo produzione buttons
+  document.getElementById('btn-type-film')?.addEventListener('click',()=>{
+    S.profile.type='film';
+    lsSet('ac.profile',S.profile);
+    render();
+  });
+  document.getElementById('btn-type-serie')?.addEventListener('click',()=>{
+    S.profile.type='serie';
+    lsSet('ac.profile',S.profile);
+    render();
+  });
+
   // Doc listeners
   ['sceneggiatura','spoglio','pdl','listamateriale'].forEach(key=>{
     document.getElementById('f-'+key)?.addEventListener('change',async e=>{
@@ -1060,6 +1140,31 @@ function renderProduzione(){
       render();
     });
   });
+
+  // Multiple sceneggiature (serie)
+  document.getElementById('f-sceneggiature-add')?.addEventListener('change',async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{
+      const t=await extractText(f);
+      if(!S.docs.sceneggiature)S.docs.sceneggiature=[];
+      S.docs.sceneggiature.push({nome:f.name,testo:t,ts:Date.now()});
+      lsSet('ac.docs',S.docs);
+      render();
+    }catch{
+      alert('Errore nella lettura del PDF');
+    }
+  });
+  [...document.querySelectorAll('[id^="del-sceneggiature-"]')].forEach(btn=>{
+    const idx=parseInt(btn.id.split('-')[2]);
+    btn.addEventListener('click',()=>{
+      if(S.docs.sceneggiature){
+        S.docs.sceneggiature.splice(idx,1);
+        lsSet('ac.docs',S.docs);
+        render();
+      }
+    });
+  });
+
   document.getElementById('btn-memdocs')?.addEventListener('click',runDocs);
   document.querySelectorAll('[data-compare]').forEach(b=>b.addEventListener('click',()=>openCompare(b.dataset.compare)));
   document.querySelectorAll('[data-setcur]').forEach(b=>b.addEventListener('click',()=>setCurrentVersion(b.dataset.setcur)));
