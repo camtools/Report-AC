@@ -774,9 +774,9 @@ function sceneggiatureRow(){
     <div class="row">
       <label class="doc-btn">
         <input type="file" id="f-sceneggiature-add" accept=".pdf" style="display:none">
-        📄 Aggiungi sceneggiatura
+        📄 Carica PDF
       </label>
-      <span id="fn-sceneggiature">${hasAny?`<span style="color:var(--acc)">${hasAny?'✓ '+hasAny+' caricata'+(hasAny>1?'e':'')+'':`Non caricato`}</span>`:`<span style="font-family:var(--mono);font-size:11px;color:var(--mu2)">Non caricato</span>`}</span>
+      <span id="fn-sceneggiature">${hasAny?`<span class="doc-fn">✓ ${hasAny} caricata${hasAny>1?'e':''}</span>`:`<span style="font-family:var(--mono);font-size:11px;color:var(--mu2)">Non caricato</span>`}</span>
     </div>`;
   if(hasAny){
     html+=`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">`;
