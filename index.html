@@ -771,14 +771,15 @@ function sceneggiatureRow(){
   const dot=`<span class="dot" style="background:${hasAny?'var(--acc)':'var(--b2)'};margin-right:8px;vertical-align:middle"></span>`;
   let html=`<div class="field">
     <label class="lbl">${dot}Sceneggiature (serie)</label>
-    <div class="row" style="margin-bottom:8px">
+    <div class="row">
       <label class="doc-btn">
         <input type="file" id="f-sceneggiature-add" accept=".pdf" style="display:none">
         📄 Aggiungi sceneggiatura
       </label>
+      <span id="fn-sceneggiature">${hasAny?`<span style="color:var(--acc)">${hasAny?'✓ '+hasAny+' caricata'+(hasAny>1?'e':'')+'':`Non caricato`}</span>`:`<span style="font-family:var(--mono);font-size:11px;color:var(--mu2)">Non caricato</span>`}</span>
     </div>`;
   if(hasAny){
-    html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
+    html+=`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">`;
     list.forEach((s,i)=>{
       html+=`<div class="row" style="gap:8px;padding:8px;background:var(--b);border-radius:6px">
         <span class="doc-fn">✓ ${esc(s.nome)}</span>
@@ -786,8 +787,6 @@ function sceneggiatureRow(){
       </div>`;
     });
     html+=`</div>`;
-  }else{
-    html+=`<span style="font-family:var(--mono);font-size:11px;color:var(--mu2)">Nessuna sceneggiatura caricata</span>`;
   }
   html+=`</div>`;
   return html;
