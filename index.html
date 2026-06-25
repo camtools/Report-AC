@@ -36,7 +36,7 @@ button{font-family:var(--sans);cursor:pointer}
 
 /* Layout */
 #topbar{position:sticky;top:0;z-index:40;background:rgba(16,17,19,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--b)}
-.tbar-inner{max-width:860px;margin:0 auto;padding:8px 18px}
+.tbar-inner{max-width:860px;margin:0 auto;padding:max(16px, env(safe-area-inset-top)) 18px 8px}
 .shell{max-width:860px;margin:0 auto;padding:0 18px 90px}
 .brand{display:flex;align-items:center;gap:11px;margin-bottom:0}
 .bmark{width:30px;height:30px;border-radius:8px;border:1px solid var(--b2);flex:none;object-fit:cover;display:block;background:transparent;padding:0;margin:0}
