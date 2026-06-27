@@ -307,8 +307,8 @@ function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{} notif
 function saveDayState(){lsSet('ac.day.'+S.day.data,S.day);}
 
 // ═══════════════════════════ CLOUD SYNC (Supabase) ═════════════════════
-const SUPABASE_URL='https://YOUR_PROJECT.supabase.co';
-const SUPABASE_ANON_KEY='YOUR_ANON_KEY';
+const SUPABASE_URL='https://suxyvzhskdnxaquxcmsb.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_51_XykRvGwexvVk3Y3JOIQ_XSriej4e';
 const sb=(SUPABASE_URL.startsWith('https://')&&!SUPABASE_URL.includes('YOUR_PROJECT'))
   ?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
 
