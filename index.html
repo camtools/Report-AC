@@ -135,6 +135,18 @@ button{font-family:var(--sans);cursor:pointer}
 .mem-box .mlbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
 .mem-text{font-size:14px;line-height:1.6;color:var(--tx2);white-space:pre-wrap}
 
+/* Collapsible sections */
+.collapse-h{cursor:pointer;user-select:none;justify-content:space-between}
+.collapse-h .n{margin-right:auto}
+.collapse-arrow{font-size:11px;color:var(--mu2);transition:transform .18s ease;flex:none}
+.collapse-arrow.open{transform:rotate(180deg)}
+
+/* Riassunto sceneggiatura */
+.riassunto-title{font-family:var(--disp);font-size:18px;font-weight:700;margin-bottom:10px;color:var(--tx)}
+.riassunto-logline{font-size:14.5px;font-style:italic;color:var(--acc);line-height:1.5;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--b)}
+.riassunto-sinossi p{font-size:14px;line-height:1.65;color:var(--tx2);margin-bottom:12px}
+.riassunto-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--b)}
+
 /* Archive */
 .arc-btn{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--sf);border:1px solid var(--b);border-radius:10px;text-align:left;width:100%;cursor:pointer;color:var(--tx);margin-bottom:8px;transition:border-color .12s,background .12s}
 .arc-btn:hover{border-color:var(--b2);background:var(--sf2)}
@@ -228,6 +240,7 @@ button{font-family:var(--sans);cursor:pointer}
   .ov,.synth,.bli,.sli,.dmeta b{color:#000!important}
   .bsec h3,.scol h5,.lbl,.mlbl{color:#555!important}
   .mem-text{color:#000!important}
+  .riassunto-sinossi p,.riassunto-logline{color:#000!important;border-color:#ccc!important}
   .print-head{display:block!important;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #000;font-size:18px;font-weight:700;color:#000;font-family:'Space Grotesk',sans-serif}
   .c-alta{color:#c06000!important;background:#fde8d0!important}
   .c-media{color:#7a5500!important;background:#f5e8cc!important}
@@ -290,6 +303,9 @@ const S={
   usage: lsGet('ac.usage',{session:{inputTokens:0,outputTokens:0,cost:0},daily:{}}),  // track token usage
   user: null,                // utente autenticato (sync cloud)
   syncStatus:'idle', syncError:'', lastSyncAt:null,
+  riassunto: lsGet('ac.riassunto',null),
+  riassuntoLoading:false, riassuntoError:'',
+  collapse: lsGet('ac.collapse',{attrezzatura:false,briefing:false,riassunto:false}),
 };
 
 // Migrazione dal vecchio formato a versione singola → archivio versioni
@@ -382,6 +398,8 @@ function reloadStateFromStorage(){
   S.day=loadTodayDay();
   S.mode=localStorage.getItem('ac.mode')||'manual';
   S.usage=lsGet('ac.usage',{session:{inputTokens:0,outputTokens:0,cost:0},daily:{}});
+  S.riassunto=lsGet('ac.riassunto',null);
+  S.collapse=lsGet('ac.collapse',{attrezzatura:false,briefing:false,riassunto:false});
 }
 
 function renderAuthGate(view,err){
@@ -535,6 +553,11 @@ IMPORTANTE: l'array "scene" deve avere ESATTAMENTE un elemento per ogni scena fo
 Rispondi SOLO con JSON valido, nessun testo prima o dopo:
 {"scene":[{"criticita":"alta|media|bassa","titolo_breve":"3-6 parole","sintesi":"1-2 frasi","gear":["max 5"],"anticipa":["max 5"],"note_tecniche":["max 5"]}],"quadro":{"overview":"3-5 frasi sul ritmo e le sfide della giornata","criticita_globale":"alta|media|bassa","checklist":["max 6"],"anticipa":["max 5"],"domande":["domande per operatore/DoP/regia — max 6"]}}`;
 
+const SYS_RIASSUNTO=`Sei un primo assistente operatore (focus puller) e script reader del cinema italiano.
+Ti viene fornita una sceneggiatura. Crea un riassunto chiaro e leggibile, utile a chi deve prepararsi alla produzione senza aver letto tutta la sceneggiatura.
+Rispondi SOLO con JSON valido, nessun testo prima o dopo:
+{"titolo":"titolo dell'opera se deducibile dal testo, altrimenti stringa vuota","logline":"1-2 frasi che riassumono la storia","sinossi":"riassunto in prosa della trama, diviso in paragrafi separati da \\n\\n, scorrevole e completo (max 3500 caratteri)","personaggi":[{"nome":"...","ruolo":"breve descrizione del personaggio e del suo arco narrativo"}],"struttura":["blocchi narrativi principali / atti, in ordine, max 6 voci brevi"]}`;
+
 // ═══════════════════════════ UTILS ════════════════════════════════════
 const NORM=c=>{const v=(c||'').toLowerCase();return v.startsWith('a')?'alta':v.startsWith('m')?'media':'bassa';};
 const RANK={alta:3,media:2,bassa:1};
@@ -641,6 +664,42 @@ async function runDocs(){
     applyDocsResult(parseJSON(raw));S.memStep='';
   }catch(e){S.memError='Analisi non riuscita: '+(e.message||'errore sconosciuto');}
   finally{S.memLoading=false;render();}
+}
+
+function hasSceneggiaturaLoaded(){
+  return S.profile.type==='film'?!!S.docs.sceneggiatura:(S.docs.sceneggiature?.length>0);
+}
+function buildRiassuntoMsg(){
+  let msg='';
+  if(S.profile.type==='film'){
+    if(S.docs.sceneggiatura)msg+='=== SCENEGGIATURA ===\n'+S.docs.sceneggiatura.testo+'\n\n';
+  }else{
+    (S.docs.sceneggiature||[]).forEach((s,i)=>{msg+=`=== SCENEGGIATURA ${i+1} (${s.nome}) ===\n${s.testo}\n\n`;});
+  }
+  msg+='Crea il riassunto della sceneggiatura.';
+  return msg;
+}
+function applyRiassuntoResult(j){
+  S.riassunto={
+    titolo:j.titolo||'',
+    logline:j.logline||'',
+    sinossi:j.sinossi||'',
+    personaggi:Array.isArray(j.personaggi)?j.personaggi:[],
+    struttura:Array.isArray(j.struttura)?j.struttura:[],
+    ts:Date.now()
+  };
+  lsSet('ac.riassunto',S.riassunto);
+}
+async function runRiassunto(){
+  if(!hasSceneggiaturaLoaded()){S.riassuntoError='Carica la sceneggiatura prima di generare il riassunto.';render();return;}
+  const msg=buildRiassuntoMsg();
+  if(S.mode==='manual'){openBridge('riassunto',SYS_RIASSUNTO,msg);return;}
+  S.riassuntoLoading=true;S.riassuntoError='';render();
+  try{
+    const raw=await claude(SYS_RIASSUNTO,msg,3500);
+    applyRiassuntoResult(parseJSON(raw));
+  }catch(e){S.riassuntoError='Generazione non riuscita: '+(e.message||'errore sconosciuto');}
+  finally{S.riassuntoLoading=false;render();}
 }
 
 function finalizeDay(res,dout){
@@ -785,6 +844,11 @@ function setMode(m){
   if(m==='api')S.bridge=null;
   render();
 }
+function toggleCollapse(key){
+  S.collapse[key]=!S.collapse[key];
+  lsSet('ac.collapse',S.collapse);
+  render();
+}
 function processBridge(){
   if(!S.bridge)return;
   const ta=document.getElementById('bridge-resp');
@@ -800,6 +864,7 @@ function processBridge(){
     const j=parseJSON(text);
     if(kind==='docs')applyDocsResult(j);
     else if(kind==='day')applyDayResult(j,S.bridge.extra.scenes);
+    else if(kind==='riassunto')applyRiassuntoResult(j);
     closeBridge();
   }catch(e){
     S.bridge.error='Non riesco a leggere la risposta. Assicurati di aver incollato il blocco COMPLETO che inizia con { e finisce con } (senza testo aggiunto). Dettaglio: '+(e.message||'formato non valido');
@@ -825,7 +890,8 @@ function renderBridge(){
   const meta={
     docs:{t:'Memoria di produzione',s:'Genera il briefing dai documenti — gratis, tramite claude.ai'},
     day:{t:'Analisi della giornata',s:'Analizza tutte le scene del giorno in un colpo solo — gratis, tramite claude.ai'},
-    diff:{t:'Confronto versioni',s:'Fatti spiegare cosa è cambiato — gratis, tramite claude.ai'}
+    diff:{t:'Confronto versioni',s:'Fatti spiegare cosa è cambiato — gratis, tramite claude.ai'},
+    riassunto:{t:'Riassunto sceneggiatura',s:'Genera la sintesi della sceneggiatura — gratis, tramite claude.ai'}
   }[S.bridge.kind]||{t:'Claude',s:''};
   const hint=S.bridge.kind==='diff'?'Claude risponde in testo normale: incolla tutto.':'Claude risponde con un blocco JSON che inizia con { e finisce con }: incolla tutto, anche le graffe.';
   el.innerHTML=`<div class="bov">
@@ -1209,12 +1275,33 @@ function renderOggi(){
   document.getElementById('btn-reset')?.addEventListener('click',()=>{S.analysis=null;S.day.scene='';S.day.odg='';saveDayState();render();});
 }
 
+function riassuntoBodyHTML(r){
+  const paras=(r.sinossi||'').split(/\n\n+/).map(p=>p.trim()).filter(Boolean);
+  return `
+    <div class="print-head">${esc(r.titolo||'Riassunto sceneggiatura')}</div>
+    <div class="riassunto-title no-print">${esc(r.titolo||'Riassunto sceneggiatura')}</div>
+    ${r.logline?`<div class="riassunto-logline">${esc(r.logline)}</div>`:''}
+    <div class="riassunto-sinossi">${paras.map(p=>`<p>${esc(p)}</p>`).join('')}</div>
+    ${r.personaggi?.length?`<div class="riassunto-block">
+      <div class="mlbl">Personaggi</div>
+      ${r.personaggi.map(p=>`<div class="sli"><span class="d" style="color:var(--acc);width:120px">${esc(p.nome)}</span><span>${esc(p.ruolo)}</span></div>`).join('')}
+    </div>`:''}
+    ${r.struttura?.length?`<div class="riassunto-block">
+      <div class="mlbl">Struttura narrativa</div>
+      ${r.struttura.map((s,i)=>`<div class="sli"><span class="d">${i+1}.</span><span>${esc(s)}</span></div>`).join('')}
+    </div>`:''}
+    <div class="row no-print" style="margin-top:18px">
+      <button id="btn-print-riassunto" class="btn ghost sm">Esporta PDF</button>
+      <button id="btn-riassunto-rigenera" class="btn ghost sm">Rigenera</button>
+    </div>`;
+}
+
 function renderProduzione(){
   const m=S.memoria;
   let h=`<div class="shell">`;
 
   // Documenti
-  h+=`<div class="sec">
+  h+=`<div class="sec no-print">
     <div class="sectit"><h2>Documenti</h2></div>
     <div class="card" style="padding:18px">
       <!-- Tipo produzione -->
@@ -1243,47 +1330,83 @@ function renderProduzione(){
     </div>
   </div>`;
 
+  // Riassunto sceneggiatura
+  if(hasSceneggiaturaLoaded()){
+    const open=!!S.collapse.riassunto;
+    h+=`<div class="sec">
+      <div class="sectit collapse-h" data-collapse="riassunto"><h2>Riassunto sceneggiatura</h2>${S.riassunto?`<span class="n">aggiornato ${new Date(S.riassunto.ts).toLocaleDateString('it-IT')}</span>`:''}<span class="collapse-arrow ${open?'open':''}">▾</span></div>
+      <div id="body-riassunto" style="display:${open?'block':'none'}">
+        <div class="card" style="padding:18px">
+          ${S.riassuntoLoading
+            ?`<div class="row" style="gap:12px;padding:8px 0"><div class="spin sm"></div><span style="font-family:var(--mono);font-size:12px;color:var(--mu)">Generazione riassunto…</span></div>`
+            :S.riassunto
+              ?riassuntoBodyHTML(S.riassunto)
+              :`<div class="hint" style="margin-bottom:14px">Genera un riassunto della sceneggiatura: utile per chi deve prepararsi alla produzione senza leggere tutto il copione.</div>
+                <button id="btn-riassunto" class="btn">${S.mode==='manual'?'Prepara prompt →':'Genera riassunto'}</button>`
+          }
+          ${S.riassuntoError?`<div class="err">${esc(S.riassuntoError)}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+
   // Memoria preview
   if(m&&!S.memLoading){
-    h+=`<div class="card" style="margin-top:12px">
-      <div class="mem-box">
-        <div class="row" style="justify-content:space-between;align-items:baseline">
-          <div class="mlbl" style="margin-bottom:0">Briefing reparto macchina</div>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--acc)">memoria v${m.v} corrente</span>
+    const open=!!S.collapse.briefing;
+    h+=`<div class="sec no-print">
+      <div class="sectit collapse-h" data-collapse="briefing"><h2>Briefing reparto macchina</h2><span class="n">memoria v${m.v} corrente</span><span class="collapse-arrow ${open?'open':''}">▾</span></div>
+      <div id="body-briefing" style="display:${open?'block':'none'}">
+        <div class="card">
+          <div class="mem-box">
+            <div class="mem-text">${esc(m.briefing)}</div>
+          </div>
+          ${m.rischi?.length?`<div style="padding:0 18px 18px;border-top:1px solid var(--b);padding-top:16px;margin-top:0">
+            <div class="mlbl">Rischi tecnici produzione</div>
+            ${m.rischi.map(r=>`<div class="sli"><span class="d" style="color:var(--red)">▸</span><span>${esc(r)}</span></div>`).join('')}
+          </div>`:''}
+          ${m.scene_chiave?.length?`<div style="padding:0 18px 18px;border-top:1px solid var(--b);padding-top:16px">
+            <div class="mlbl">Scene chiave mappate</div>
+            ${m.scene_chiave.map(s=>`<div class="sli"><span class="d" style="color:var(--mu2);width:30px">Sc.${esc(s.sc)}</span><span style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap">${badge(NORM(s.crit))} <span>${esc(s.desc)}</span><span style="color:var(--mu2)">—</span><span>${esc(s.nota)}</span></span></div>`).join('')}
+          </div>`:''}
         </div>
-        <div class="mem-text" style="margin-top:10px">${esc(m.briefing)}</div>
       </div>
-      ${m.rischi?.length?`<div style="padding:0 18px 18px;border-top:1px solid var(--b);padding-top:16px;margin-top:0">
-        <div class="mlbl">Rischi tecnici produzione</div>
-        ${m.rischi.map(r=>`<div class="sli"><span class="d" style="color:var(--red)">▸</span><span>${esc(r)}</span></div>`).join('')}
-      </div>`:''}
-      ${m.scene_chiave?.length?`<div style="padding:0 18px 18px;border-top:1px solid var(--b);padding-top:16px">
-        <div class="mlbl">Scene chiave mappate</div>
-        ${m.scene_chiave.map(s=>`<div class="sli"><span class="d" style="color:var(--mu2);width:30px">Sc.${esc(s.sc)}</span><span style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap">${badge(NORM(s.crit))} <span>${esc(s.desc)}</span><span style="color:var(--mu2)">—</span><span>${esc(s.nota)}</span></span></div>`).join('')}
-      </div>`:''}
     </div>`;
   }
 
   // Cronologia versioni
-  if(!S.memLoading) h+=versionHistoryHTML();
+  if(!S.memLoading) h+=`<div class="no-print">${versionHistoryHTML()}</div>`;
 
   // Attrezzatura
-  h+=`<div class="sec">
-    <div class="sectit"><h2>Attrezzatura (Opzionale) </h2></div>
-    <div class="card" style="padding:18px">
-      <div class="field"><label class="lbl">Titolo produzione</label><input id="prof-nome" class="inp" type="text" value="${esc(S.profile.nome)}" placeholder="Es. Nobody's Diary"></div>
-      <div class="field"><label class="lbl">Mezzi / attrezzatura a disposizione</label><textarea id="prof-gear" class="inp" rows="4" placeholder="Camera, ottiche, follow focus wireless, monitor, transmitter, batterie…&#10;Es. ARRI Alexa 35, Cooke S4, Hi-5 wireless, Swit K15 + Teradek Bolt 4K, Blueshape…">${esc(S.profile.gear)}</textarea></div>
-      <div class="field"><label class="lbl">Note produzione</label><textarea id="prof-note" class="inp" rows="3" placeholder="Location ricorrenti, particolarità, accordi tecnici, vincoli…">${esc(S.profile.note)}</textarea></div>
-      <div class="row">
-        <button id="btn-sprof" class="btn">Salva</button>
-        <span id="prof-ok" class="saved" style="display:none"><span class="dot" style="background:var(--acc)"></span>Salvato</span>
+  {
+    const open=!!S.collapse.attrezzatura;
+    h+=`<div class="sec no-print">
+      <div class="sectit collapse-h" data-collapse="attrezzatura"><h2>Attrezzatura (Opzionale) </h2><span class="collapse-arrow ${open?'open':''}">▾</span></div>
+      <div id="body-attrezzatura" style="display:${open?'block':'none'}">
+        <div class="card" style="padding:18px">
+          <div class="field"><label class="lbl">Titolo produzione</label><input id="prof-nome" class="inp" type="text" value="${esc(S.profile.nome)}" placeholder="Es. Nobody's Diary"></div>
+          <div class="field"><label class="lbl">Mezzi / attrezzatura a disposizione</label><textarea id="prof-gear" class="inp" rows="4" placeholder="Camera, ottiche, follow focus wireless, monitor, transmitter, batterie…&#10;Es. ARRI Alexa 35, Cooke S4, Hi-5 wireless, Swit K15 + Teradek Bolt 4K, Blueshape…">${esc(S.profile.gear)}</textarea></div>
+          <div class="field"><label class="lbl">Note produzione</label><textarea id="prof-note" class="inp" rows="3" placeholder="Location ricorrenti, particolarità, accordi tecnici, vincoli…">${esc(S.profile.note)}</textarea></div>
+          <div class="row">
+            <button id="btn-sprof" class="btn">Salva</button>
+            <span id="prof-ok" class="saved" style="display:none"><span class="dot" style="background:var(--acc)"></span>Salvato</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>`;
-
+    </div>`;
+  }
 
   h+='</div>';
   document.getElementById('main').innerHTML=h;
+
+  // Collapsible toggles
+  document.querySelectorAll('[data-collapse]').forEach(el=>{
+    el.addEventListener('click',()=>toggleCollapse(el.dataset.collapse));
+  });
+
+  // Riassunto
+  document.getElementById('btn-riassunto')?.addEventListener('click',()=>{S.collapse.riassunto=true;lsSet('ac.collapse',S.collapse);runRiassunto();});
+  document.getElementById('btn-riassunto-rigenera')?.addEventListener('click',()=>{S.riassunto=null;lsSet('ac.riassunto',null);runRiassunto();});
+  document.getElementById('btn-print-riassunto')?.addEventListener('click',()=>window.print());
 
   // Tipo produzione buttons
   document.getElementById('btn-type-film')?.addEventListener('click',()=>{
